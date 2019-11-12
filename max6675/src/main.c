@@ -54,6 +54,9 @@ int main(void)
     /* GPIO configure */
     gpio_config();
 
+    /* NSS high -> diable SPI1 */
+    gpio_bit_set(GPIOB, GPIO_PIN_12);
+
     longan_oled_init();
 
     longan_led_init();
@@ -106,6 +109,7 @@ void rcu_config(void)
     rcu_periph_clock_enable(RCU_GPIOB);
     rcu_periph_clock_enable(RCU_GPIOC);
 
+    rcu_periph_clock_enable(RCU_SPI1);
     rcu_periph_clock_enable(RCU_AF);
 }
 
@@ -132,10 +136,18 @@ void longan_led_init(void)
 */
 void gpio_config(void)
 {
+#if 0
     /* SPI1 GPIO config: SCK1/PB13 + NSS1/PB12 + MISO1/PB14 */
     gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14);
     /* MISO1/PB14 */
     // gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
+#endif
+
+    /* SPI1_SCK(PB13), SPI1_MISO(PB14) GPIO pin configuration */
+    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
+    gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
+    /* SPI1_CS(PB12) GPIO pin configuration */
+    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
 
     /* configure led GPIO port */ 
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
@@ -159,7 +171,7 @@ void spi1_config(void)
     /* SPI1 parameter config */
     spi_init_struct.trans_mode           = SPI_TRANSMODE_RECEIVEONLY;
     spi_init_struct.device_mode          = SPI_MASTER;
-    spi_init_struct.frame_size           = SPI_FRAMESIZE_8BIT;
+    spi_init_struct.frame_size           = SPI_FRAMESIZE_16BIT;
     spi_init_struct.clock_polarity_phase = SPI_CK_PL_HIGH_PH_2EDGE;
     spi_init_struct.nss                  = SPI_NSS_HARD;
     spi_init_struct.prescale             = SPI_PSC_256;
