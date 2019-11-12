@@ -1,0 +1,5 @@
+{
+    "files.associations": {
+        "gd32vf103_spi.h": "c"
+    }
+}
