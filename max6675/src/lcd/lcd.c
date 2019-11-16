@@ -165,7 +165,7 @@ void dma_config(void)
     \param[out] none
     \retval     none
 */
-void spi_config(void)
+static void spi_config(void)
 {
     spi_parameter_struct spi_init_struct;
     /* deinitilize SPI and the parameters */
