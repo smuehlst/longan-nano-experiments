@@ -34,11 +34,11 @@ OF SUCH DAMAGE.
 #include "lcd/lcd.h"
 #include <string.h>
 
-void rcu_config(void);
-void gpio_config(void);
-void spi1_config(void);
-void longan_oled_init(void);
-void longan_led_init(void);
+static void rcu_config(void);
+static void gpio_config(void);
+static void spi1_config(void);
+static void longan_oled_init(void);
+static void longan_led_init(void);
 
 /*!
     \brief      main function
@@ -58,34 +58,35 @@ int main(void)
 
     longan_led_init();
 
+    LCD_ShowString(24, 0, (u8 const *) "Starting!", GBLUE);
+
     /* SPI configure */
     spi1_config();
 
-    LCD_ShowString(0, 0, (u8 const *) "Starting!", GBLUE);
-    // delay_1ms(1000);
+    spi_enable(SPI1);
+
+    while (TRUE);
 
     uint32_t cntr = 0;
     while (TRUE)
     {
+        // empty buffer
+        // spi_i2s_data_receive(SPI1);
+
         spi_enable(SPI1);
+        
+        while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_RBNE));
 
-        LCD_ShowString(0, 16, (u8 const *) "call spi_i2s_flag_get", GBLUE);
-        // while(RESET == spi_i2s_flag_get(SPI0, SPI_FLAG_RBNE));
-
-        // delay_1ms(1);
-
-        LCD_ShowString(0, 24, (u8 const *) "call spi_i2s_data_receive", GBLUE);
         uint16_t const data = spi_i2s_data_receive(SPI1);
 
-        LCD_ShowString(0, 32, (u8 const *) "call spi_disable", GBLUE);
-        spi_disable(SPI1);
+        // spi_disable(SPI1);
 
         char buf[32];
         sprintf(buf, "SPI data %u", data);
         LCD_ShowString(24, 0, (u8 const *) buf, GBLUE);
 
         static const char blanks[] = "        ";
-        strcpy(buf, "        ");
+        strcpy(buf, blanks);
         buf[cntr % (sizeof(blanks) - 1)] = 'o';
         LCD_ShowString(24, 16, (u8 const *) buf, MAGENTA);
 
@@ -93,8 +94,7 @@ int main(void)
         cntr += 1;
 
         LEDR_TOG;
-    }
-    while (1);
+    } while (1);
 }
 
 /*!
@@ -103,7 +103,7 @@ int main(void)
     \param[out] none
     \retval     none
 */
-void rcu_config(void)
+static void rcu_config(void)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
     rcu_periph_clock_enable(RCU_GPIOB);
@@ -113,14 +113,14 @@ void rcu_config(void)
     rcu_periph_clock_enable(RCU_AF);
 }
 
-void longan_oled_init(void)
+static void longan_oled_init(void)
 {
     Lcd_Init();			// init OLED
     LCD_Clear(BLACK);
     BACK_COLOR = BLACK;
 }
 
-void longan_led_init(void)
+static void longan_led_init(void)
 {
     /* 1 means off! */
     LEDR(1);
@@ -134,22 +134,12 @@ void longan_led_init(void)
     \param[out] none
     \retval     none
 */
-void gpio_config(void)
+static void gpio_config(void)
 {
-#if 0
-    /* SPI1 GPIO config: SCK1/PB13 + NSS1/PB12 + MISO1/PB14 */
-    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14);
-    /* MISO1/PB14 */
-    // gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
-#endif
-
     /* SPI1_SCK(PB13), SPI1_MISO(PB14) GPIO pin configuration */
     /* SPI1_CS(PB12) GPIO pin configuration */
     gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13 | GPIO_PIN_12);
     gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
-
-    /* gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12); */
-    /* gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_11); */
 
     /* configure led GPIO port */ 
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
@@ -162,7 +152,7 @@ void gpio_config(void)
     \param[out] none
     \retval     none
 */
-void spi1_config(void)
+static void spi1_config(void)
 {
     spi_parameter_struct spi_init_struct;
     /* deinitilize SPI and the parameters */
@@ -176,7 +166,9 @@ void spi1_config(void)
     spi_init_struct.frame_size           = SPI_FRAMESIZE_16BIT;
     spi_init_struct.clock_polarity_phase = SPI_CK_PL_LOW_PH_2EDGE;
     spi_init_struct.nss                  = SPI_NSS_HARD;
-    spi_init_struct.prescale             = SPI_PSC_256;
+    spi_init_struct.prescale             = SPI_PSC_2;
     spi_init_struct.endian               = SPI_ENDIAN_MSB;
     spi_init(SPI1, &spi_init_struct);
+
+    spi_nss_output_enable(SPI1);
 }
