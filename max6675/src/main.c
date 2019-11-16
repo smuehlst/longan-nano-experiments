@@ -54,9 +54,6 @@ int main(void)
     /* GPIO configure */
     gpio_config();
 
-    /* NSS high -> diable SPI1 */
-    gpio_bit_set(GPIOB, GPIO_PIN_12);
-
     longan_oled_init();
 
     longan_led_init();
@@ -64,20 +61,24 @@ int main(void)
     /* SPI configure */
     spi1_config();
 
-    /* SPI enable */
-    spi_enable(SPI1);
-
-    LCD_ShowString(24, 0, (u8 const *) "Starting!", GBLUE);
-    delay_1ms(1000);
+    LCD_ShowString(0, 0, (u8 const *) "Starting!", GBLUE);
+    // delay_1ms(1000);
 
     uint32_t cntr = 0;
     while (TRUE)
     {
-        gpio_bit_reset(GPIOB, GPIO_PIN_12);
+        spi_enable(SPI1);
 
+        LCD_ShowString(0, 16, (u8 const *) "call spi_i2s_flag_get", GBLUE);
+        // while(RESET == spi_i2s_flag_get(SPI0, SPI_FLAG_RBNE));
+
+        // delay_1ms(1);
+
+        LCD_ShowString(0, 24, (u8 const *) "call spi_i2s_data_receive", GBLUE);
         uint16_t const data = spi_i2s_data_receive(SPI1);
 
-        gpio_bit_set(GPIOB, GPIO_PIN_12);
+        LCD_ShowString(0, 32, (u8 const *) "call spi_disable", GBLUE);
+        spi_disable(SPI1);
 
         char buf[32];
         sprintf(buf, "SPI data %u", data);
@@ -88,12 +89,11 @@ int main(void)
         buf[cntr % (sizeof(blanks) - 1)] = 'o';
         LCD_ShowString(24, 16, (u8 const *) buf, MAGENTA);
 
-        delay_1ms(1000);
+        delay_1ms(300);
         cntr += 1;
 
         LEDR_TOG;
     }
-
     while (1);
 }
 
@@ -144,10 +144,12 @@ void gpio_config(void)
 #endif
 
     /* SPI1_SCK(PB13), SPI1_MISO(PB14) GPIO pin configuration */
-    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
-    gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
     /* SPI1_CS(PB12) GPIO pin configuration */
-    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
+    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13 | GPIO_PIN_12);
+    gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
+
+    /* gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12); */
+    /* gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_11); */
 
     /* configure led GPIO port */ 
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
@@ -172,11 +174,9 @@ void spi1_config(void)
     spi_init_struct.trans_mode           = SPI_TRANSMODE_RECEIVEONLY;
     spi_init_struct.device_mode          = SPI_MASTER;
     spi_init_struct.frame_size           = SPI_FRAMESIZE_16BIT;
-    spi_init_struct.clock_polarity_phase = SPI_CK_PL_HIGH_PH_2EDGE;
+    spi_init_struct.clock_polarity_phase = SPI_CK_PL_LOW_PH_2EDGE;
     spi_init_struct.nss                  = SPI_NSS_HARD;
     spi_init_struct.prescale             = SPI_PSC_256;
     spi_init_struct.endian               = SPI_ENDIAN_MSB;
     spi_init(SPI1, &spi_init_struct);
-
-    spi_nss_output_enable(SPI1);
 }
