@@ -151,8 +151,8 @@ static void gpio_config(void)
 static void spi1_config(void)
 {
     spi_parameter_struct spi_init_struct;
-    /* deinitilize SPI and the parameters */
-
+ 
+   /* deinitilize SPI and the parameters */
     spi_i2s_deinit(SPI1);
     spi_struct_para_init(&spi_init_struct);
 
@@ -162,7 +162,7 @@ static void spi1_config(void)
     spi_init_struct.frame_size           = SPI_FRAMESIZE_16BIT;
     spi_init_struct.clock_polarity_phase = SPI_CK_PL_LOW_PH_2EDGE;
     spi_init_struct.nss                  = SPI_NSS_HARD;
-    spi_init_struct.prescale             = SPI_PSC_2;
+    spi_init_struct.prescale             = SPI_PSC_256; // ~5274 Hz serial frequency
     spi_init_struct.endian               = SPI_ENDIAN_MSB;
     spi_init(SPI1, &spi_init_struct);
 
