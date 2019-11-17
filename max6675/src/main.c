@@ -60,18 +60,14 @@ int main(void)
 
     LCD_ShowString(24, 0, (u8 const *) "Starting!", GBLUE);
 
-    /* SPI configure */
+    /* SPI MRU configure */
     spi1_config();
-
-    spi_enable(SPI1);
-
-    while (TRUE);
 
     uint32_t cntr = 0;
     while (TRUE)
     {
         // empty buffer
-        // spi_i2s_data_receive(SPI1);
+        spi_i2s_data_receive(SPI1);
 
         spi_enable(SPI1);
         
@@ -79,7 +75,7 @@ int main(void)
 
         uint16_t const data = spi_i2s_data_receive(SPI1);
 
-        // spi_disable(SPI1);
+        spi_disable(SPI1);
 
         char buf[32];
         sprintf(buf, "SPI data %u", data);
