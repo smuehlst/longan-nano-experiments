@@ -133,9 +133,13 @@ static void longan_led_init(void)
 static void gpio_config(void)
 {
     /* SPI1_SCK(PB13), SPI1_MISO(PB14) GPIO pin configuration */
-    /* SPI1_CS(PB12) GPIO pin configuration */
-    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13 | GPIO_PIN_12);
+    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
     gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
+    /* SPI1_CS(PB12) GPIO pin configuration */
+    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
+
+    /* CS invalid */
+    gpio_bit_set(GPIOB, GPIO_PIN_12);
 
     /* configure led GPIO port */ 
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
