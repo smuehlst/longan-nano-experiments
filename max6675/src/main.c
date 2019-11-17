@@ -69,12 +69,21 @@ int main(void)
         // empty buffer
         spi_i2s_data_receive(SPI1);
 
+        // start SCK
         spi_enable(SPI1);
-        
+
+        // CS low -> enabled
+        gpio_bit_reset(GPIOB, GPIO_PIN_12);
+
+        // Wait until reveive buffer is filled.
         while (RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_RBNE));
 
         uint16_t const data = spi_i2s_data_receive(SPI1);
 
+        // CS high -> disabled
+        gpio_bit_set(GPIOB, GPIO_PIN_12);
+
+        // stop SCK
         spi_disable(SPI1);
 
         char buf[32];
@@ -135,10 +144,12 @@ static void gpio_config(void)
     /* SPI1_SCK(PB13), SPI1_MISO(PB14) GPIO pin configuration */
     gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
     gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
-    /* SPI1_CS(PB12) GPIO pin configuration */
+    /* SPI1_CS(PB12) GPIO pin configuration,
+     * GPIO_MODE_OUT_PP as it is controlled in software.
+     */
     gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
 
-    /* CS invalid */
+    /* CS disabled */
     gpio_bit_set(GPIOB, GPIO_PIN_12);
 
     /* configure led GPIO port */ 
@@ -165,10 +176,8 @@ static void spi1_config(void)
     spi_init_struct.device_mode          = SPI_MASTER;
     spi_init_struct.frame_size           = SPI_FRAMESIZE_16BIT;
     spi_init_struct.clock_polarity_phase = SPI_CK_PL_LOW_PH_2EDGE;
-    spi_init_struct.nss                  = SPI_NSS_HARD;
+    spi_init_struct.nss                  = SPI_NSS_SOFT;
     spi_init_struct.prescale             = SPI_PSC_256; // ~5274 Hz serial frequency
     spi_init_struct.endian               = SPI_ENDIAN_MSB;
     spi_init(SPI1, &spi_init_struct);
-
-    spi_nss_output_enable(SPI1);
 }
