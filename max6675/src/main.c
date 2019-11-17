@@ -87,13 +87,22 @@ int main(void)
         spi_disable(SPI1);
 
         char buf[32];
-        sprintf(buf, "SPI data %u", data);
+        sprintf(buf, "SPI data 0x%x", data);
         LCD_ShowString(24, 0, (u8 const *) buf, GBLUE);
+
+        // extract temperature bits from 16-bit value
+        uint16_t const temp_data = data >> 3;
+
+        // format temperature in degrees
+        uint16_t const degrees = temp_data / 4;
+        uint16_t const hundredth_degrees = (temp_data % 4) * 100 / 4;
+        sprintf(buf, "T %u.%02u deg  ", degrees, hundredth_degrees);
+        LCD_ShowString(24, 16, (u8 const *) buf, MAGENTA);
 
         static const char blanks[] = "        ";
         strcpy(buf, blanks);
         buf[cntr % (sizeof(blanks) - 1)] = 'o';
-        LCD_ShowString(24, 16, (u8 const *) buf, MAGENTA);
+        LCD_ShowString(24, 32, (u8 const *) buf, LGRAY);
 
         delay_1ms(300);
         cntr += 1;
@@ -167,7 +176,7 @@ static void spi1_config(void)
 {
     spi_parameter_struct spi_init_struct;
  
-   /* deinitilize SPI and the parameters */
+    /* deinitilize SPI and the parameters */
     spi_i2s_deinit(SPI1);
     spi_struct_para_init(&spi_init_struct);
 
