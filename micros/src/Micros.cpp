@@ -15,7 +15,7 @@ extern "C" {
 
 static void longan_oled_init(void)
 {
-    Lcd_Init();			// init OLED
+    Lcd_Init();
     LCD_Clear(BLACK);
     BACK_COLOR = BLACK;
 }
@@ -30,20 +30,18 @@ void setup()
 
 void loop()
 {
-#if 1
   unsigned long const time = micros();
 
   char buf[64];
-  sprintf(buf, "time %ld     ", time);
+  sprintf(buf, "time %ld             ", time);
   LCD_ShowString(0, 0, (u8 const *) buf, GBLUE);
-#endif
 
   // turn the LED on (HIGH is the voltage level)
   digitalWrite(LED_BUILTIN, HIGH);
   // wait for a second
-  delay(100);
+  delay(1000);
   // turn the LED off by making the voltage LOW
   digitalWrite(LED_BUILTIN, LOW);
   // wait for a second
-  delay(100);
+  delay(1000);
 }
