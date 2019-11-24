@@ -45,22 +45,44 @@ static void longan_oled_init(void)
     BACK_COLOR = BLACK;
 }
 
+uint64_t longan_micros(void){
+  return static_cast<uint64_t>(get_timer_value() * (SystemCoreClock / 4000000.0));
+}
+
 }
 
 void setup() {
+  micros();
   longan_oled_init();
 
   LCD_ShowString(24, 0, (u8 const *) "Starting!", GBLUE);
   delay(500);
 
-  stepmotor.setSpeed(50);
+  stepmotor.setSpeed(5);
   standby();
   LCD_ShowString(24, 0, (u8 const *) "Initialized!", GBLUE);
   delay(500);
+
+#if 0
+  LCD_Clear(BLACK);
+  uint64_t const now = longan_micros();
+  delay(5000);
+
+  uint64_t const then = longan_micros();
+  uint64_t const diff = then - now;
+
+  char buf[64];
+  sprintf(buf, "stdel %x%08x",
+    static_cast<unsigned int>(diff >> 32),
+    static_cast<unsigned int>(diff));
+  LCD_ShowString(0, 1 * 16, (u8 const *) buf, GBLUE);
+
+  while (1);
+#endif
 }
 
 void loop() {
-  LCD_Clear(BLACK);
+  // LCD_Clear(BLACK);
 
   char ch = next_command();
   char const chs = ch;

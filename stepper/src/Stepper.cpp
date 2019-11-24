@@ -86,7 +86,7 @@ extern "C" {
 
 namespace {
   uint64_t longan_micros(void){
-    return get_timer_value() * (SystemCoreClock/4000000U);
+    return static_cast<uint64_t>(get_timer_value() * (SystemCoreClock / 4000000.0));
   }
 }
 
@@ -97,8 +97,7 @@ namespace {
 Stepper::Stepper(int number_of_steps, int motor_pin_1, int motor_pin_2)
 {
   this->step_number = 0;    // which step the motor is on
-  this->direction = 0;      // motor direction
-  this->last_step_time = 0; // time stamp in us of the last step taken
+  // this->last_step_time = 0; // time stamp in us of the last step taken
   this->number_of_steps = number_of_steps; // total number of steps for this motor
 
   // Arduino pins for the motor control connection:
@@ -127,8 +126,7 @@ Stepper::Stepper(int number_of_steps, int motor_pin_1, int motor_pin_2,
                                       int motor_pin_3, int motor_pin_4)
 {
   this->step_number = 0;    // which step the motor is on
-  this->direction = 0;      // motor direction
-  this->last_step_time = 0; // time stamp in us of the last step taken
+ //  this->last_step_time = 0; // time stamp in us of the last step taken
   this->number_of_steps = number_of_steps; // total number of steps for this motor
 
   // Arduino pins for the motor control connection:
@@ -159,8 +157,7 @@ Stepper::Stepper(int number_of_steps, int motor_pin_1, int motor_pin_2,
                                       int motor_pin_5)
 {
   this->step_number = 0;    // which step the motor is on
-  this->direction = 0;      // motor direction
-  this->last_step_time = 0; // time stamp in us of the last step taken
+  // this->last_step_time = 0; // time stamp in us of the last step taken
   this->number_of_steps = number_of_steps; // total number of steps for this motor
 
   // Arduino pins for the motor control connection:
@@ -186,7 +183,13 @@ Stepper::Stepper(int number_of_steps, int motor_pin_1, int motor_pin_2,
  */
 void Stepper::setSpeed(long whatSpeed)
 {
-  this->step_delay = 60L * 1000L * 1000L / this->number_of_steps / whatSpeed;
+  this->step_delay = static_cast<uint64_t>(60L * 1000L * 1000L / this->number_of_steps / whatSpeed);
+
+  char buf[64];
+  sprintf(buf, "stdel %x%08x",
+    static_cast<unsigned int>(this->step_delay >> 32),
+    static_cast<unsigned int>(this->step_delay));
+  LCD_ShowString(0, 1 * 16, (u8 const *) buf, GBLUE);
 }
 
 /*
@@ -198,13 +201,21 @@ void Stepper::step(int steps_to_move)
   int steps_left = abs(steps_to_move);  // how many steps to take
 
   // determine direction based on whether steps_to_mode is + or -:
-  if (steps_to_move > 0) { this->direction = 1; }
-  if (steps_to_move < 0) { this->direction = 0; }
+  int const direction = steps_to_move > 0;
 
+  unsigned int steps_done = 0, loops_done = 0;
+
+  char buf[64];
+  sprintf(buf, "steps_left %d", steps_left);
+  LCD_ShowString(0, 2 * 16, (u8 const *) buf, GBLUE);
+
+  uint64_t last_step_time = 0;
 
   // decrement the number of steps, moving one step each time:
   while (steps_left > 0)
   {
+    loops_done += 1;
+
     uint64_t const now = longan_micros();
 
 #if 0
@@ -220,15 +231,13 @@ void Stepper::step(int steps_to_move)
 #endif
 
     // move only if the appropriate delay has passed:
-    if (now - this->last_step_time >= this->step_delay)
+    if (now - last_step_time >= this->step_delay)
     {
-      LEDG(1);
-
       // get the timeStamp of when you stepped:
-      this->last_step_time = now;
+      last_step_time = now;
       // increment or decrement the step number,
       // depending on direction:
-      if (this->direction == 1)
+      if (direction == 1)
       {
         this->step_number++;
         if (this->step_number == this->number_of_steps) {
@@ -250,11 +259,15 @@ void Stepper::step(int steps_to_move)
       else
         stepMotor(this->step_number % 4);
 
-      LEDG_TOG;
+      steps_done += 1;
     }
-
-    delay_1ms(10);
   }
+
+  sprintf(buf, "ls %u ss %u",
+      loops_done, steps_done);
+  LCD_ShowString(0, 3 * 16, (u8 const *) buf, GBLUE);
+
+  // while (1);
 }
 
 /*
@@ -283,8 +296,6 @@ void Stepper::stepMotor(int thisStep)
     }
   }
   if (this->pin_count == 4) {
-    LEDB(1);
-
     switch (thisStep) {
       case 0:  // 1010
         digitalWrite(motor_pin_1, HIGH);
@@ -311,7 +322,6 @@ void Stepper::stepMotor(int thisStep)
         digitalWrite(motor_pin_4, HIGH);
       break;
     }
-    LEDB_TOG;
   }
 
   if (this->pin_count == 5) {
