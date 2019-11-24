@@ -34,7 +34,7 @@ OF SUCH DAMAGE.
 
 #include <stdio.h>
 #include "gd32v_pjt_include.h"
-
+#include "systick.h"
 
 /**
     \brief      configure the GPIO ports
@@ -44,23 +44,24 @@ OF SUCH DAMAGE.
   */
 static void gpio_config(void)
 {
-    /* Configure PA0(TIMER1 CH0) as alternate function */
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_0);
-
     /* Configure led GPIO port */ 
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
-    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_1|GPIO_PIN_2);
+
+    // Use PA0 ... PA3 as motor control
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ,
+        GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
 }
 
 static void rcu_config(void)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
-    // rcu_periph_clock_enable(RCU_GPIOB);
     rcu_periph_clock_enable(RCU_GPIOC);
-
-    rcu_periph_clock_enable(RCU_AF);
-
     rcu_periph_clock_enable(RCU_TIMER1);
+}
+
+static void standby(void)
+{
+    GPIO_BOP(GPIOA) = GPIO_BOP_CR0 | GPIO_BOP_CR1 | GPIO_BOP_CR1 | GPIO_BOP_CR3;
 }
 
 /**
@@ -69,13 +70,13 @@ static void rcu_config(void)
     \param[out] none
     \retval     none
   */
-void timer_config(void)
+void timer_config(uint32_t step_delay_us)
 {
     /* ----------------------------------------------------------------------------
     TIMER1 Configuration: 
-    TIMER1CLK = SystemCoreClock/5400 = 20KHz.
-    TIMER1 configuration is timing mode, and the timing is 0.2s(4000/20000 = 0.2s).
-    CH0 update rate = TIMER1 counter clock/CH0CV = 20000/4000 = 5Hz.
+    TIMER1CLK = SystemCoreClock/108 = 1MHz.
+    TIMER1 configuration is timing mode, and the timing is how many microseconds
+    it takes for two motor steps.
     ---------------------------------------------------------------------------- */
     timer_oc_parameter_struct timer_ocinitpara;
     timer_parameter_struct timer_initpara;
@@ -84,10 +85,10 @@ void timer_config(void)
     /* initialize TIMER init parameter struct */
     timer_struct_para_init(&timer_initpara);
     /* TIMER1 configuration */
-    timer_initpara.prescaler         = 10800;
+    timer_initpara.prescaler         = (uint16_t) (SystemCoreClock / 1000000U);
     timer_initpara.alignedmode       = TIMER_COUNTER_EDGE;
     timer_initpara.counterdirection  = TIMER_COUNTER_UP;
-    timer_initpara.period            = 10000;
+    timer_initpara.period            = step_delay_us;
     timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
     timer_init(TIMER1, &timer_initpara);
 
@@ -98,26 +99,19 @@ void timer_config(void)
     timer_ocinitpara.ocpolarity   = TIMER_OC_POLARITY_HIGH;
     timer_ocinitpara.ocidlestate  = TIMER_OC_IDLE_STATE_LOW;
     timer_channel_output_config(TIMER1, TIMER_CH_0, &timer_ocinitpara);
-    timer_channel_output_config(TIMER1, TIMER_CH_1, &timer_ocinitpara);
 
     /* CH0 configuration in OC timing mode */
-    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_0, 5000);
+    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_0, 0);
     timer_channel_output_mode_config(TIMER1, TIMER_CH_0, TIMER_OC_MODE_TIMING);
     timer_channel_output_shadow_config(TIMER1, TIMER_CH_0, TIMER_OC_SHADOW_DISABLE);
 
     timer_interrupt_enable(TIMER1, TIMER_INT_CH0);
 
-    /* CH1 configuration in OC timing mode */
-#if 1
-    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_1, 2500);
-    timer_channel_output_mode_config(TIMER1, TIMER_CH_1, TIMER_OC_MODE_TIMING);
-    timer_channel_output_shadow_config(TIMER1, TIMER_CH_1, TIMER_OC_SHADOW_DISABLE);
-
-    timer_interrupt_enable(TIMER1, TIMER_INT_CH1);
-#endif
-
     timer_enable(TIMER1);
 }
+
+static uint32_t volatile steps_left;
+// static unsigned int direction_up;
 
 /*!
     \brief      main function
@@ -127,6 +121,10 @@ void timer_config(void)
 */
 int main(void)
 {
+    uint32_t number_of_steps = 2048;
+    uint32_t rpm = 10;
+    uint32_t step_delay = 60 * 1000 * 1000 / number_of_steps / rpm;
+
     /* peripheral clock enable */
     rcu_config();
 
@@ -141,31 +139,48 @@ int main(void)
     eclic_global_interrupt_enable();
     eclic_set_nlbits(ECLIC_GROUP_LEVEL3_PRIO1);
     eclic_irq_enable(TIMER1_IRQn, 1, 0);
-    timer_config();
+
+    while (1)
+    {
+        steps_left = 2048;
+
+        timer_config(step_delay);
+
+        while (steps_left > 0);
+
+        LEDR_TOG;
+        delay_1ms(1000);
+    }
 
     while (1);
 }
 
+static uint32_t const steps[] =
+{
+    GPIO_BOP_BOP0 | GPIO_BOP_CR1 | GPIO_BOP_BOP2 | GPIO_BOP_CR3, // 1010
+    GPIO_BOP_CR0 | GPIO_BOP_BOP1 | GPIO_BOP_BOP1 | GPIO_BOP_CR3, // 0110
+    GPIO_BOP_CR0 | GPIO_BOP_BOP1 | GPIO_BOP_CR2 | GPIO_BOP_BOP3, // 0101
+    GPIO_BOP_BOP0 | GPIO_BOP_CR1 | GPIO_BOP_CR2 | GPIO_BOP_BOP3 // 1001
+};
+
 void TIMER1_IRQHandler(void)
 {
     bool const ch0_intr = SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH0);
-    bool const ch1_intr = SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH1);
 
     if (ch0_intr) {
         /* clear channel 0 interrupt bit */
         timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH0);
-        LEDR_TOG;
-    }
-
-    if (ch1_intr) {
-        /* clear channel 0 interrupt bit */
-        timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH1);
-        // LEDG_TOG;
-    }
-
-    if (0 && ch0_intr && ch1_intr) {
-        // Do both interrupts arrive in the same call?
-        LEDB(0);
-    }
-    // LEDB_TOG;
+        
+        if (steps_left == 0)
+        {
+            standby();
+            timer_interrupt_disable(TIMER1, TIMER_INT_CH0);
+        }
+        else
+        {
+            uint32_t const idx = steps_left % (sizeof(steps) / sizeof(steps[0]));
+            GPIO_BOP(GPIOA) = steps[idx];
+            steps_left -= 1;
+        }
+    }   
 }
