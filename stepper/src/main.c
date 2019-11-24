@@ -85,10 +85,10 @@ void timer_config(void)
     /* initialize TIMER init parameter struct */
     timer_struct_para_init(&timer_initpara);
     /* TIMER1 configuration */
-    timer_initpara.prescaler         = 5399;
+    timer_initpara.prescaler         = 10800;
     timer_initpara.alignedmode       = TIMER_COUNTER_EDGE;
     timer_initpara.counterdirection  = TIMER_COUNTER_UP;
-    timer_initpara.period            = 4000;
+    timer_initpara.period            = 10000;
     timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
     timer_init(TIMER1, &timer_initpara);
 
@@ -99,13 +99,24 @@ void timer_config(void)
     timer_ocinitpara.ocpolarity   = TIMER_OC_POLARITY_HIGH;
     timer_ocinitpara.ocidlestate  = TIMER_OC_IDLE_STATE_LOW;
     timer_channel_output_config(TIMER1, TIMER_CH_0, &timer_ocinitpara);
+    timer_channel_output_config(TIMER1, TIMER_CH_1, &timer_ocinitpara);
 
     /* CH0 configuration in OC timing mode */
-    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_0, 2000);
+    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_0, 5000);
     timer_channel_output_mode_config(TIMER1, TIMER_CH_0, TIMER_OC_MODE_TIMING);
     timer_channel_output_shadow_config(TIMER1, TIMER_CH_0, TIMER_OC_SHADOW_DISABLE);
 
     timer_interrupt_enable(TIMER1, TIMER_INT_CH0);
+
+    /* CH1 configuration in OC timing mode */
+#if 1
+    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_1, 2500);
+    timer_channel_output_mode_config(TIMER1, TIMER_CH_1, TIMER_OC_MODE_TIMING);
+    timer_channel_output_shadow_config(TIMER1, TIMER_CH_1, TIMER_OC_SHADOW_DISABLE);
+
+    timer_interrupt_enable(TIMER1, TIMER_INT_CH1);
+#endif
+
     timer_enable(TIMER1);
 }
 
@@ -134,4 +145,28 @@ int main(void)
     timer_config();
 
     while (1);
+}
+
+void TIMER1_IRQHandler(void)
+{
+    bool const ch0_intr = SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH0);
+    bool const ch1_intr = SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH1);
+
+    if (ch0_intr) {
+        /* clear channel 0 interrupt bit */
+        timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH0);
+        LEDR_TOG;
+    }
+
+    if (ch1_intr) {
+        /* clear channel 0 interrupt bit */
+        timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH1);
+        // LEDG_TOG;
+    }
+
+    if (0 && ch0_intr && ch1_intr) {
+        // Do both interrupts arrive in the same call?
+        LEDB(0);
+    }
+    // LEDB_TOG;
 }
