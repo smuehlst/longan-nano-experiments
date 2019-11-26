@@ -9,6 +9,7 @@ extern "C" {
 #include "lcd/lcd.h"
 }
 #include <stdio.h>
+#include <inttypes.h>
 
 // Set LED_BUILTIN if it is not defined by Arduino framework
 // #define LED_BUILTIN 2
@@ -30,11 +31,17 @@ void setup()
 
 void loop()
 {
-  unsigned long const time = micros();
+  uint64_t const time = micros();
 
   char buf[64];
-  sprintf(buf, "time %ld             ", time);
+  
+  sprintf(buf, "time %" PRIu64 "             ", time);
   LCD_ShowString(0, 0, (u8 const *) buf, GBLUE);
+
+  sprintf(buf, "time %x%08x      ",
+            static_cast<int>(time >> 32),
+            static_cast<int>(time));
+  LCD_ShowString(0, 16, (u8 const *) buf, GBLUE);
 
   // turn the LED on (HIGH is the voltage level)
   digitalWrite(LED_BUILTIN, HIGH);
