@@ -54,7 +54,7 @@
  *   10  0  0  1  0  1
  *
  * The sequence of control signals for 4 control wires is as follows:
- *
+ * MODIFIED! (see below for half-steps)
  * Step C0 C1 C2 C3
  *    1  1  0  1  0
  *    2  0  1  1  0
@@ -78,18 +78,6 @@
 #include "Arduino.h"
 #include "Stepper.h"
 
-#include "gd32v_pjt_include.h"
-
-extern "C" {
-#include "lcd/lcd.h"
-}
-
-namespace {
-  uint64_t longan_micros(void){
-    return static_cast<uint64_t>(get_timer_value() * (SystemCoreClock / 4000000.0));
-  }
-}
-
 /*
  * two-wire constructor.
  * Sets which wires should control the motor.
@@ -97,7 +85,6 @@ namespace {
 Stepper::Stepper(int number_of_steps, int motor_pin_1, int motor_pin_2)
 {
   this->step_number = 0;    // which step the motor is on
-  // this->last_step_time = 0; // time stamp in us of the last step taken
   this->number_of_steps = number_of_steps; // total number of steps for this motor
 
   // Arduino pins for the motor control connection:
@@ -117,7 +104,6 @@ Stepper::Stepper(int number_of_steps, int motor_pin_1, int motor_pin_2)
   this->pin_count = 2;
 }
 
-
 /*
  *   constructor for four-pin version
  *   Sets which wires should control the motor.
@@ -126,7 +112,6 @@ Stepper::Stepper(int number_of_steps, int motor_pin_1, int motor_pin_2,
                                       int motor_pin_3, int motor_pin_4)
 {
   this->step_number = 0;    // which step the motor is on
- //  this->last_step_time = 0; // time stamp in us of the last step taken
   this->number_of_steps = number_of_steps; // total number of steps for this motor
 
   // Arduino pins for the motor control connection:
@@ -157,7 +142,6 @@ Stepper::Stepper(int number_of_steps, int motor_pin_1, int motor_pin_2,
                                       int motor_pin_5)
 {
   this->step_number = 0;    // which step the motor is on
-  // this->last_step_time = 0; // time stamp in us of the last step taken
   this->number_of_steps = number_of_steps; // total number of steps for this motor
 
   // Arduino pins for the motor control connection:
@@ -183,13 +167,7 @@ Stepper::Stepper(int number_of_steps, int motor_pin_1, int motor_pin_2,
  */
 void Stepper::setSpeed(long whatSpeed)
 {
-  this->step_delay = static_cast<uint64_t>(60L * 1000L * 1000L / this->number_of_steps / whatSpeed);
-
-  char buf[64];
-  sprintf(buf, "stdel %x%08x",
-    static_cast<unsigned int>(this->step_delay >> 32),
-    static_cast<unsigned int>(this->step_delay));
-  LCD_ShowString(0, 1 * 16, (u8 const *) buf, GBLUE);
+  this->step_delay = 60L * 1000L * 1000L / this->number_of_steps / whatSpeed;
 }
 
 /*
@@ -203,38 +181,19 @@ void Stepper::step(int steps_to_move)
   // determine direction based on whether steps_to_mode is + or -:
   int const direction = steps_to_move > 0;
 
-  unsigned int steps_done = 0, loops_done = 0;
-
-  char buf[64];
-  sprintf(buf, "steps_left %d", steps_left);
-  LCD_ShowString(0, 2 * 16, (u8 const *) buf, GBLUE);
-
   uint64_t last_step_time = 0;
 
   // decrement the number of steps, moving one step each time:
   while (steps_left > 0)
   {
-    loops_done += 1;
-
-    uint64_t const now = longan_micros();
-
-#if 0
-    char buf[64];
-    sprintf(buf, "now %x%x",
-      static_cast<unsigned int>(now >> 32),
-      static_cast<unsigned int>(now));
-    LCD_ShowString(24, 16, (u8 const *) buf, GBLUE);
-    sprintf(buf, "last %x%x",
-      static_cast<unsigned int>(this->last_step_time >> 32),
-       static_cast<unsigned int>(this->last_step_time));
-    LCD_ShowString(24, 32, (u8 const *) buf, GBLUE);
-#endif
+    uint64_t const now = micros();
 
     // move only if the appropriate delay has passed:
     if (now - last_step_time >= this->step_delay)
     {
       // get the timeStamp of when you stepped:
       last_step_time = now;
+
       // increment or decrement the step number,
       // depending on direction:
       if (direction == 1)
@@ -257,17 +216,9 @@ void Stepper::step(int steps_to_move)
       if (this->pin_count == 5)
         stepMotor(this->step_number % 10);
       else
-        stepMotor(this->step_number % 4);
-
-      steps_done += 1;
+        stepMotor(this->step_number % 8);
     }
   }
-
-  sprintf(buf, "ls %u ss %u",
-      loops_done, steps_done);
-  LCD_ShowString(0, 3 * 16, (u8 const *) buf, GBLUE);
-
-  // while (1);
 }
 
 /*
@@ -296,26 +247,51 @@ void Stepper::stepMotor(int thisStep)
     }
   }
   if (this->pin_count == 4) {
+    // Adapted to half-steps for 28BYJ-48 motor
     switch (thisStep) {
-      case 0:  // 1010
-        digitalWrite(motor_pin_1, HIGH);
+      case 0:
+        digitalWrite(motor_pin_1, LOW);
+        digitalWrite(motor_pin_2, LOW);
+        digitalWrite(motor_pin_3, LOW);
+        digitalWrite(motor_pin_4, HIGH);
+      break;
+      case 1:
+        digitalWrite(motor_pin_1, LOW);
+        digitalWrite(motor_pin_2, LOW);
+        digitalWrite(motor_pin_3, HIGH);
+        digitalWrite(motor_pin_4, HIGH);
+      break;
+      case 2:
+        digitalWrite(motor_pin_1, LOW);
         digitalWrite(motor_pin_2, LOW);
         digitalWrite(motor_pin_3, HIGH);
         digitalWrite(motor_pin_4, LOW);
       break;
-      case 1:  // 0110
+      case 3:
         digitalWrite(motor_pin_1, LOW);
         digitalWrite(motor_pin_2, HIGH);
         digitalWrite(motor_pin_3, HIGH);
         digitalWrite(motor_pin_4, LOW);
       break;
-      case 2:  //0101
+      case 4:
         digitalWrite(motor_pin_1, LOW);
         digitalWrite(motor_pin_2, HIGH);
         digitalWrite(motor_pin_3, LOW);
-        digitalWrite(motor_pin_4, HIGH);
+        digitalWrite(motor_pin_4, LOW);
       break;
-      case 3:  //1001
+      case 5:
+        digitalWrite(motor_pin_1, HIGH);
+        digitalWrite(motor_pin_2, HIGH);
+        digitalWrite(motor_pin_3, LOW);
+        digitalWrite(motor_pin_4, LOW);
+      break;
+      case 6:
+        digitalWrite(motor_pin_1, HIGH);
+        digitalWrite(motor_pin_2, LOW);
+        digitalWrite(motor_pin_3, LOW);
+        digitalWrite(motor_pin_4, LOW);
+      break;
+      case 7:
         digitalWrite(motor_pin_1, HIGH);
         digitalWrite(motor_pin_2, LOW);
         digitalWrite(motor_pin_3, LOW);

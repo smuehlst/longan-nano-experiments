@@ -9,7 +9,7 @@ extern "C" {
 namespace {
 
 // set the number of steps of the motor 
-constexpr int STEPS = 2048;
+constexpr int STEPS = 4096;
 
 constexpr int IN1 = PA0;
 constexpr int IN2 = PA1;
@@ -45,56 +45,34 @@ static void longan_oled_init(void)
     BACK_COLOR = BLACK;
 }
 
-uint64_t longan_micros(void){
-  return static_cast<uint64_t>(get_timer_value() * (SystemCoreClock / 4000000.0));
-}
-
 }
 
 void setup() {
-  micros();
   longan_oled_init();
 
   LCD_ShowString(24, 0, (u8 const *) "Starting!", GBLUE);
   delay(500);
 
-  stepmotor.setSpeed(5);
+  stepmotor.setSpeed(10);
   standby();
   LCD_ShowString(24, 0, (u8 const *) "Initialized!", GBLUE);
   delay(500);
-
-#if 0
-  LCD_Clear(BLACK);
-  uint64_t const now = longan_micros();
-  delay(5000);
-
-  uint64_t const then = longan_micros();
-  uint64_t const diff = then - now;
-
-  char buf[64];
-  sprintf(buf, "stdel %x%08x",
-    static_cast<unsigned int>(diff >> 32),
-    static_cast<unsigned int>(diff));
-  LCD_ShowString(0, 1 * 16, (u8 const *) buf, GBLUE);
-
-  while (1);
-#endif
 }
 
 void loop() {
-  // LCD_Clear(BLACK);
+  LCD_Clear(BLACK);
 
   char ch = next_command();
   char const chs = ch;
   int val;
 
   switch (ch) {    
-    case 'f': val =  2048; ch='\0'; break;   // 
-    case 'b': val = -2048; ch='\0'; break;   // 
-    case 'v': val =  512;  ch='\0'; break;   // 
-    case 'r': val = -512;  ch='\0'; break;   // 
-    case '+': val =  16;   ch='\0'; break;   // 
-    case '-': val = -16;   ch='\0'; break;   // 
+    case 'f': val =  4096; ch='\0'; break;   // 
+    case 'b': val = -4096; ch='\0'; break;   // 
+    case 'v': val =  2048;  ch='\0'; break;   // 
+    case 'r': val = -2048;  ch='\0'; break;   // 
+    case '+': val =  1024;   ch='\0'; break;   // 
+    case '-': val = -1024;   ch='\0'; break;   // 
     case 'c': val = 512;            break;   // run continous forward
     case 'e':  val = 0;    ch='\0'; break;   // 
     case '\0': val = 0;    ch='\0'; break;   // reset, nichts tun

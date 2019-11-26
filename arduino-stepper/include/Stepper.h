@@ -79,6 +79,8 @@
 #ifndef Stepper_h
 #define Stepper_h
 
+#include <stdint.h>
+
 // library interface description
 class Stepper {
   public:
@@ -101,7 +103,7 @@ class Stepper {
   private:
     void stepMotor(int this_step);
 
-    uint64_t step_delay; // delay between steps, in ms, based on speed
+    uint64_t step_delay;      // delay between steps, in ms, based on speed
     int number_of_steps;      // total number of steps this motor can take
     int pin_count;            // how many pins are in use.
     int step_number;          // which step the motor is on
@@ -113,7 +115,7 @@ class Stepper {
     int motor_pin_4;
     int motor_pin_5;          // Only 5 phase motor
 
-    // uint64_t last_step_time; // time stamp in us of when the last step was taken
+    uint64_t last_step_time; // time stamp in us of when the last step was taken
 };
 
 #endif
