@@ -142,17 +142,16 @@ int main(void)
 
     while (1)
     {
+        LEDR(1);
         steps_left = 2048;
 
         timer_config(step_delay);
 
         while (steps_left > 0);
 
-        LEDR_TOG;
+        LEDR(0);
         delay_1ms(1000);
     }
-
-    while (1);
 }
 
 static uint32_t const steps[] =
