@@ -33,6 +33,7 @@ OF SUCH DAMAGE.
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "gd32v_pjt_include.h"
 #include "systick.h"
 
@@ -65,10 +66,10 @@ static void rcu_config(void)
 typedef struct 
 {
     uint32_t steps_per_revolution;
-#if 0
     uint32_t timer;
     uint32_t timer_channel;
     uint32_t gpio_periph;
+#if 0
     uint32_t pin1, pin2, pin3, pin4;
 #endif
 } motor_config;
@@ -79,9 +80,9 @@ typedef struct
     uint32_t timer_channel;
     uint32_t gpio_periph;
     uint32_t volatile steps_left;
-#if 0
+    uint32_t volatile step_number;
+    uint32_t steps_per_revolution;
     uint32_t direction;
-#endif
     uint32_t steps[8]; // 1010 -> 0110 -> 0101 -> 1001
     uint32_t standby; // 0000
 } motor_runtime;
@@ -93,10 +94,19 @@ typedef struct
     \param[out] none
     \retval     none
   */
-void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in, uint32_t rpm)
-
+void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in,
+             int32_t steps_to_move, uint32_t rpm)
 {
-    uint32_t step_delay_us = 60 * 1000 * 1000 / cfg_in->steps_per_revolution / rpm;
+    cfg_out->timer = cfg_in->timer;
+    cfg_out->timer_channel = cfg_in->timer_channel;
+    cfg_out->gpio_periph = cfg_in->gpio_periph;
+
+    cfg_out->steps_left = abs(steps_to_move);
+    cfg_out->direction = steps_to_move > 0;
+    cfg_out->step_number = 0;
+    cfg_out->steps_per_revolution = cfg_in->steps_per_revolution;
+
+    uint32_t step_delay_us = 60 * 1000 * 1000 / cfg_out->steps_per_revolution / rpm;
 
     /* ----------------------------------------------------------------------------
     TIMER1 Configuration: 
@@ -136,13 +146,7 @@ void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in, uint32_
     timer_enable(cfg_out->timer);
 }
 
-// static unsigned int direction_up;
-
 static motor_runtime motor1 = {
-    .timer = TIMER1,
-    .timer_channel = TIMER_INT_CH0,
-    .gpio_periph = GPIOA,
-    .steps_left = 0,
     .steps = {
         BOP_CLR_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_CLR_BIT(GPIO_PIN_2) | BOP_SET_BIT(GPIO_PIN_3), // 0001
         BOP_CLR_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_SET_BIT(GPIO_PIN_2) | BOP_SET_BIT(GPIO_PIN_3), // 0011
@@ -156,7 +160,6 @@ static motor_runtime motor1 = {
     },
     .standby = BOP_CLR_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_CLR_BIT(GPIO_PIN_2) | BOP_CLR_BIT(GPIO_PIN_3)
 };
-
 
 /*!
     \brief      main function
@@ -182,20 +185,25 @@ int main(void)
     eclic_irq_enable(TIMER1_IRQn, 1, 0);
 
     static motor_config const config1 = {
+        .timer = TIMER1,
+        .timer_channel = TIMER_INT_CH0,
+        .gpio_periph = GPIOA,
         .steps_per_revolution = 4096
     };
+
+    int32_t steps = 2048;
 
     while (1)
     {
         LEDR(1);
-        motor1.steps_left = 4096;
 
-        motor_configure(&motor1, &config1, 10U);
+        motor_configure(&motor1, &config1, steps, 10U);
 
         while (motor1.steps_left > 0);
 
         LEDR(0);
         delay_1ms(1000);
+        steps *= -1;
     }
 }
 
@@ -207,7 +215,7 @@ void process_motor_intr(motor_runtime * const mrt)
     if (ch0_intr) {
         /* clear channel 0 interrupt bit */
         timer_interrupt_flag_clear(mrt->timer, mrt->timer_channel);
-        
+
         if (mrt->steps_left == 0)
         {
             GPIO_BOP(mrt->gpio_periph) = mrt->standby;
@@ -215,11 +223,28 @@ void process_motor_intr(motor_runtime * const mrt)
         }
         else
         {
-            uint32_t const idx = mrt->steps_left % (sizeof(mrt->steps) / sizeof(mrt->steps[0]));
+            if (mrt->direction == 1)
+            {
+                mrt->step_number += 1;
+                if (mrt->step_number == mrt->steps_per_revolution)
+                {
+                    mrt->step_number = 0;
+                }
+            }
+            else
+            {
+                if (mrt->step_number == 0)
+                {
+                    mrt->step_number = mrt->steps_per_revolution;
+                }
+                mrt->step_number -= 1;
+            }
+
+            uint32_t const idx = mrt->step_number % (sizeof(mrt->steps) / sizeof(mrt->steps[0]));
             GPIO_BOP(mrt->gpio_periph) = mrt->steps[idx];
             mrt->steps_left -= 1;
         }
-    }   
+    }
 }
 
 void TIMER1_IRQHandler(void)
