@@ -47,7 +47,7 @@ static void gpio_config(void)
     /* Configure led GPIO port */ 
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
 
-     // Use PA0 ... PA3 as motor control
+    // Use PA0 ... PA3 as motor control
     gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ,
         GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
 }
@@ -59,34 +59,9 @@ static void rcu_config(void)
     rcu_periph_clock_enable(RCU_TIMER1);
 }
 
-typedef struct 
+static void standby(void)
 {
-    uint32_t timer;
-    uint32_t timer_channel;
-    uint32_t gpio_periph;
-    uint32_t pin1, pin2, pin3, pin4;
-} motor_config;
-
-typedef struct
-{
-    uint32_t timer;
-    uint32_t timer_channel;
-    uint32_t gpio_periph;
-    uint32_t volatile steps_left;
-    uint32_t direction;
-    uint32_t steps[4]; // 1010 -> 0110 -> 0101 -> 1001
-    uint32_t standby; // 0000
-} motor_runtime;
-
-// for use with GPIO_PIN_* defines and BOP register
-static inline uint32_t BOP_SET_BIT(uint32_t bit)
-{
-    return bit;
-}
-
-static inline uint32_t BOP_CLR_BIT(uint32_t bit)
-{
-    return bit << 16;
+    GPIO_BOP(GPIOA) = GPIO_BOP_CR0 | GPIO_BOP_CR1 | GPIO_BOP_CR1 | GPIO_BOP_CR3;
 }
 
 /**
@@ -95,52 +70,8 @@ static inline uint32_t BOP_CLR_BIT(uint32_t bit)
     \param[out] none
     \retval     none
   */
-void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in, int32_t steps_to_move, uint32_t rpm)
+void timer_config(uint32_t step_delay_us)
 {
-    cfg_out->timer = cfg_in->timer;
-    cfg_out->timer_channel = cfg_in->timer_channel;
-    cfg_out->gpio_periph = cfg_in->gpio_periph;
-
-#if 0
-    gpio_init(cfg_in->gpio_periph, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ,
-        cfg_in->pin1 | cfg_in->pin2 | cfg_in->pin3 | cfg_in->pin4);
-#endif
-
-    // cfg_out->steps_left = (uint32_t) abs(steps_to_move);
-    cfg_out->steps_left = (uint32_t) steps_to_move;
-    cfg_out->direction = steps_to_move > 0;
-
-    // 1010
-    cfg_out->steps[0] = BOP_SET_BIT(cfg_in->pin1)
-                         | BOP_CLR_BIT(cfg_in->pin2)
-                         | BOP_SET_BIT(cfg_in->pin3)
-                         | BOP_CLR_BIT(cfg_in->pin4);
-
-    // 0110
-    cfg_out->steps[1] = BOP_CLR_BIT(cfg_in->pin1)
-                         | BOP_SET_BIT(cfg_in->pin2)
-                         | BOP_SET_BIT(cfg_in->pin3)
-                         | BOP_CLR_BIT(cfg_in->pin4);
-
-    // 0101
-    cfg_out->steps[2] = BOP_CLR_BIT(cfg_in->pin1)
-                         | BOP_SET_BIT(cfg_in->pin2)
-                         | BOP_CLR_BIT(cfg_in->pin3)
-                         | BOP_SET_BIT(cfg_in->pin4);
-
-    // 1001
-    cfg_out->steps[3] = BOP_SET_BIT(cfg_in->pin1)
-                         | BOP_CLR_BIT(cfg_in->pin2)
-                         | BOP_CLR_BIT(cfg_in->pin3)
-                         | BOP_SET_BIT(cfg_in->pin4);
-
-    cfg_out->standby = BOP_CLR_BIT(cfg_in->pin1)
-                         | BOP_CLR_BIT(cfg_in->pin2)
-                         | BOP_CLR_BIT(cfg_in->pin3)
-                         | BOP_CLR_BIT(cfg_in->pin4);
-
-    uint32_t const step_delay_us = 60 * 1000 * 1000 / cfg_out->steps_left / rpm;
-
     /* ----------------------------------------------------------------------------
     TIMER1 Configuration: 
     TIMER1CLK = SystemCoreClock/108 = 1MHz.
@@ -150,7 +81,7 @@ void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in, int32_t
     timer_oc_parameter_struct timer_ocinitpara;
     timer_parameter_struct timer_initpara;
 
-    timer_deinit(cfg_in->timer);
+    timer_deinit(TIMER1);
     /* initialize TIMER init parameter struct */
     timer_struct_para_init(&timer_initpara);
     /* TIMER1 configuration */
@@ -159,7 +90,7 @@ void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in, int32_t
     timer_initpara.counterdirection  = TIMER_COUNTER_UP;
     timer_initpara.period            = step_delay_us;
     timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
-    timer_init(cfg_in->timer, &timer_initpara);
+    timer_init(TIMER1, &timer_initpara);
 
     /* initialize TIMER channel output parameter struct */
     timer_channel_output_struct_para_init(&timer_ocinitpara);
@@ -167,19 +98,20 @@ void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in, int32_t
     timer_ocinitpara.outputstate  = TIMER_CCX_ENABLE;
     timer_ocinitpara.ocpolarity   = TIMER_OC_POLARITY_HIGH;
     timer_ocinitpara.ocidlestate  = TIMER_OC_IDLE_STATE_LOW;
-    timer_channel_output_config(cfg_in->timer, cfg_in->timer_channel, &timer_ocinitpara);
+    timer_channel_output_config(TIMER1, TIMER_CH_0, &timer_ocinitpara);
 
     /* CH0 configuration in OC timing mode */
-    timer_channel_output_pulse_value_config(cfg_in->timer, cfg_in->timer_channel, 0);
-    timer_channel_output_mode_config(cfg_in->timer, cfg_in->timer_channel, TIMER_OC_MODE_TIMING);
-    timer_channel_output_shadow_config(cfg_in->timer, cfg_in->timer_channel, TIMER_OC_SHADOW_DISABLE);
+    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_0, 0);
+    timer_channel_output_mode_config(TIMER1, TIMER_CH_0, TIMER_OC_MODE_TIMING);
+    timer_channel_output_shadow_config(TIMER1, TIMER_CH_0, TIMER_OC_SHADOW_DISABLE);
 
-    timer_interrupt_enable(cfg_in->timer, cfg_in->timer_channel);
+    timer_interrupt_enable(TIMER1, TIMER_INT_CH0);
 
-    timer_enable(cfg_in->timer);
+    timer_enable(TIMER1);
 }
 
-static motor_runtime timer1_irq;
+static uint32_t volatile steps_left;
+// static unsigned int direction_up;
 
 /*!
     \brief      main function
@@ -189,6 +121,11 @@ static motor_runtime timer1_irq;
 */
 int main(void)
 {
+    uint32_t number_of_steps = 4096;
+    uint32_t rpm = 10;
+    uint32_t step_delay = 60 * 1000 * 1000 / number_of_steps / rpm;
+
+    /* peripheral clock enable */
     rcu_config();
 
     /* GPIO configure */
@@ -196,18 +133,8 @@ int main(void)
 
     // longan_led_init();
     LEDR(1);
-    // LEDG(1);
-    // LEDB(1);
-
-    static motor_config const motor1 = {
-        .timer = TIMER1,
-        .timer_channel = TIMER_CH_0,
-        .gpio_periph = GPIOA,
-        .pin1 = GPIO_PIN_0,
-        .pin2 = GPIO_PIN_1,
-        .pin3 = GPIO_PIN_2,
-        .pin4 = GPIO_PIN_3
-    };
+    LEDG(1);
+    LEDB(1);
 
     eclic_global_interrupt_enable();
     eclic_set_nlbits(ECLIC_GROUP_LEVEL3_PRIO1);
@@ -215,9 +142,11 @@ int main(void)
 
     while (1)
     {
-        motor_configure(&timer1_irq, &motor1, 2048U, 10U);
+        steps_left = 2048;
 
-        while (timer1_irq.steps_left > 0);
+        timer_config(step_delay);
+
+        while (steps_left > 0);
 
         LEDR_TOG;
         delay_1ms(1000);
@@ -226,30 +155,37 @@ int main(void)
     while (1);
 }
 
-static void process_motor_intr(motor_runtime *mrt)
+static uint32_t const steps[] =
 {
-    bool const intr =
-        SET == timer_interrupt_flag_get(mrt->timer, mrt->timer_channel);
+    GPIO_BOP_CR0 | GPIO_BOP_CR1 | GPIO_BOP_CR2 | GPIO_BOP_BOP3, // 0001
+    GPIO_BOP_CR0 | GPIO_BOP_CR1 | GPIO_BOP_BOP2 | GPIO_BOP_BOP3, // 0011
+    GPIO_BOP_CR0 | GPIO_BOP_CR1 | GPIO_BOP_BOP2 | GPIO_BOP_CR3, // 0010
+    GPIO_BOP_CR0 | GPIO_BOP_BOP1 | GPIO_BOP_BOP2 | GPIO_BOP_CR3, // 0110
 
-    if (intr) {
-        /* clear channel interrupt bit */
-        timer_interrupt_flag_clear(mrt->timer, mrt->timer_channel);
-        
-        if (mrt->steps_left == 0)
-        {
-            GPIO_BOP(mrt->gpio_periph) = mrt->standby;
-            timer_interrupt_disable(mrt->timer, mrt->timer_channel);
-        }
-        else
-        {
-            uint32_t const idx = mrt->steps_left % (sizeof(mrt->steps) / sizeof(mrt->steps[0]));
-            GPIO_BOP(mrt->gpio_periph) = mrt->steps[idx];
-            mrt->steps_left -= 1;
-        }
-    }   
-}
+    GPIO_BOP_CR0 | GPIO_BOP_BOP1 | GPIO_BOP_CR2 | GPIO_BOP_CR3, // 0100
+    GPIO_BOP_BOP0 | GPIO_BOP_BOP1 | GPIO_BOP_CR2 | GPIO_BOP_CR3, // 1100
+    GPIO_BOP_BOP0 | GPIO_BOP_CR1 | GPIO_BOP_CR2 | GPIO_BOP_CR3, // 1000
+    GPIO_BOP_BOP0 | GPIO_BOP_CR1 | GPIO_BOP_CR2 | GPIO_BOP_BOP3 // 1001
+};
 
 void TIMER1_IRQHandler(void)
 {
-    process_motor_intr(&timer1_irq);
+    bool const ch0_intr = SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH0);
+
+    if (ch0_intr) {
+        /* clear channel 0 interrupt bit */
+        timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH0);
+        
+        if (steps_left == 0)
+        {
+            standby();
+            timer_interrupt_disable(TIMER1, TIMER_INT_CH0);
+        }
+        else
+        {
+            uint32_t const idx = steps_left % (sizeof(steps) / sizeof(steps[0]));
+            GPIO_BOP(GPIOA) = steps[idx];
+            steps_left -= 1;
+        }
+    }   
 }
