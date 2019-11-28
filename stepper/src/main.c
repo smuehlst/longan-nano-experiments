@@ -69,9 +69,7 @@ typedef struct
     uint32_t timer;
     uint32_t timer_channel;
     uint32_t gpio_periph;
-#if 0
     uint32_t pin1, pin2, pin3, pin4;
-#endif
 } motor_config;
 
 typedef struct
@@ -83,10 +81,9 @@ typedef struct
     uint32_t volatile step_number;
     uint32_t steps_per_revolution;
     uint32_t direction;
-    uint32_t steps[8]; // 1010 -> 0110 -> 0101 -> 1001
-    uint32_t standby; // 0000
+    uint32_t steps[8];
+    uint32_t standby;
 } motor_runtime;
-
 
 /**
     \brief      configure the TIMER peripheral
@@ -105,6 +102,27 @@ void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in,
     cfg_out->direction = steps_to_move > 0;
     cfg_out->step_number = 0;
     cfg_out->steps_per_revolution = cfg_in->steps_per_revolution;
+
+    cfg_out->steps[0] = 
+        BOP_CLR_BIT(cfg_in->pin1) | BOP_CLR_BIT(cfg_in->pin2) | BOP_CLR_BIT(cfg_in->pin3) | BOP_SET_BIT(cfg_in->pin4); // 0001
+    cfg_out->steps[1] = 
+        BOP_CLR_BIT(cfg_in->pin1) | BOP_CLR_BIT(cfg_in->pin2) | BOP_SET_BIT(cfg_in->pin3) | BOP_SET_BIT(cfg_in->pin4); // 0011
+    cfg_out->steps[2] = 
+        BOP_CLR_BIT(cfg_in->pin1) | BOP_CLR_BIT(cfg_in->pin2) | BOP_SET_BIT(cfg_in->pin3) | BOP_CLR_BIT(cfg_in->pin4); // 0010
+    cfg_out->steps[3] = 
+        BOP_CLR_BIT(cfg_in->pin1) | BOP_SET_BIT(cfg_in->pin2) | BOP_SET_BIT(cfg_in->pin3) | BOP_CLR_BIT(cfg_in->pin4); // 0110
+
+    cfg_out->steps[4] = 
+        BOP_CLR_BIT(cfg_in->pin1) | BOP_SET_BIT(cfg_in->pin2) | BOP_CLR_BIT(cfg_in->pin3) | BOP_CLR_BIT(cfg_in->pin4); // 0100
+    cfg_out->steps[5] = 
+        BOP_SET_BIT(cfg_in->pin1) | BOP_SET_BIT(cfg_in->pin2) | BOP_CLR_BIT(cfg_in->pin3) | BOP_CLR_BIT(cfg_in->pin4); // 1100
+    cfg_out->steps[6] = 
+        BOP_SET_BIT(cfg_in->pin1) | BOP_CLR_BIT(cfg_in->pin2) | BOP_CLR_BIT(cfg_in->pin3) | BOP_CLR_BIT(cfg_in->pin4); // 1000
+    cfg_out->steps[7] = 
+        BOP_SET_BIT(cfg_in->pin1) | BOP_CLR_BIT(cfg_in->pin2) | BOP_CLR_BIT(cfg_in->pin3) | BOP_SET_BIT(cfg_in->pin4);  // 1001
+
+    cfg_out->standby =
+        BOP_CLR_BIT(cfg_in->pin1) | BOP_CLR_BIT(cfg_in->pin2) | BOP_CLR_BIT(cfg_in->pin3) | BOP_CLR_BIT(cfg_in->pin4);
 
     uint32_t step_delay_us = 60 * 1000 * 1000 / cfg_out->steps_per_revolution / rpm;
 
@@ -146,20 +164,7 @@ void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in,
     timer_enable(cfg_out->timer);
 }
 
-static motor_runtime motor1 = {
-    .steps = {
-        BOP_CLR_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_CLR_BIT(GPIO_PIN_2) | BOP_SET_BIT(GPIO_PIN_3), // 0001
-        BOP_CLR_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_SET_BIT(GPIO_PIN_2) | BOP_SET_BIT(GPIO_PIN_3), // 0011
-        BOP_CLR_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_SET_BIT(GPIO_PIN_2) | BOP_CLR_BIT(GPIO_PIN_3), // 0010
-        BOP_CLR_BIT(GPIO_PIN_0) | BOP_SET_BIT(GPIO_PIN_1) | BOP_SET_BIT(GPIO_PIN_2) | BOP_CLR_BIT(GPIO_PIN_3), // 0110
-
-        BOP_CLR_BIT(GPIO_PIN_0) | BOP_SET_BIT(GPIO_PIN_1) | BOP_CLR_BIT(GPIO_PIN_2) | BOP_CLR_BIT(GPIO_PIN_3), // 0100
-        BOP_SET_BIT(GPIO_PIN_0) | BOP_SET_BIT(GPIO_PIN_1) | BOP_CLR_BIT(GPIO_PIN_2) | BOP_CLR_BIT(GPIO_PIN_3), // 1100
-        BOP_SET_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_CLR_BIT(GPIO_PIN_2) | BOP_CLR_BIT(GPIO_PIN_3), // 1000
-        BOP_SET_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_CLR_BIT(GPIO_PIN_2) | BOP_SET_BIT(GPIO_PIN_3) // 1001
-    },
-    .standby = BOP_CLR_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_CLR_BIT(GPIO_PIN_2) | BOP_CLR_BIT(GPIO_PIN_3)
-};
+static motor_runtime motor1;
 
 /*!
     \brief      main function
@@ -185,10 +190,14 @@ int main(void)
     eclic_irq_enable(TIMER1_IRQn, 1, 0);
 
     static motor_config const config1 = {
+        .steps_per_revolution = 4096,
         .timer = TIMER1,
         .timer_channel = TIMER_INT_CH0,
         .gpio_periph = GPIOA,
-        .steps_per_revolution = 4096
+        .pin1 = GPIO_PIN_0,
+        .pin2 = GPIO_PIN_1,
+        .pin3 = GPIO_PIN_2,
+        .pin4 = GPIO_PIN_3
     };
 
     int32_t steps = 2048;
