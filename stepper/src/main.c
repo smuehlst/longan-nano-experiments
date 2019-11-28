@@ -61,7 +61,7 @@ static void rcu_config(void)
 
 static void standby(void)
 {
-    GPIO_BOP(GPIOA) = GPIO_BOP_CR0 | GPIO_BOP_CR1 | GPIO_BOP_CR1 | GPIO_BOP_CR3;
+    GPIO_BOP(GPIOA) = GPIO_BOP_CR0 | GPIO_BOP_CR1 | GPIO_BOP_CR2 | GPIO_BOP_CR3;
 }
 
 /**
