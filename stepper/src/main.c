@@ -62,6 +62,17 @@ static void rcu_config(void)
 #define BOP_SET_BIT(X) (X)
 #define BOP_CLR_BIT(X) (X << 16)
 
+typedef struct 
+{
+    uint32_t steps_per_revolution;
+#if 0
+    uint32_t timer;
+    uint32_t timer_channel;
+    uint32_t gpio_periph;
+    uint32_t pin1, pin2, pin3, pin4;
+#endif
+} motor_config;
+
 typedef struct
 {
     uint32_t timer;
@@ -82,9 +93,11 @@ typedef struct
     \param[out] none
     \retval     none
   */
-void motor_configure(motor_runtime *cfg_out, uint32_t step_delay_us)
+void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in, uint32_t rpm)
 
 {
+    uint32_t step_delay_us = 60 * 1000 * 1000 / cfg_in->steps_per_revolution / rpm;
+
     /* ----------------------------------------------------------------------------
     TIMER1 Configuration: 
     TIMER1CLK = SystemCoreClock/108 = 1MHz.
@@ -153,10 +166,6 @@ static motor_runtime motor1 = {
 */
 int main(void)
 {
-    uint32_t number_of_steps = 4096;
-    uint32_t rpm = 10;
-    uint32_t step_delay = 60 * 1000 * 1000 / number_of_steps / rpm;
-
     /* peripheral clock enable */
     rcu_config();
 
@@ -172,12 +181,16 @@ int main(void)
     eclic_set_nlbits(ECLIC_GROUP_LEVEL3_PRIO1);
     eclic_irq_enable(TIMER1_IRQn, 1, 0);
 
+    static motor_config const config1 = {
+        .steps_per_revolution = 4096
+    };
+
     while (1)
     {
         LEDR(1);
-        motor1.steps_left = number_of_steps;
+        motor1.steps_left = 4096;
 
-        motor_configure(&motor1, step_delay);
+        motor_configure(&motor1, &config1, 10U);
 
         while (motor1.steps_left > 0);
 
