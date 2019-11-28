@@ -67,6 +67,22 @@ static void standby(void)
     GPIO_BOP(GPIOA) = BOP_CLR_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_CLR_BIT(GPIO_PIN_2) | BOP_CLR_BIT(GPIO_PIN_3);
 }
 
+typedef struct
+{
+    uint32_t timer;
+    uint32_t timer_channel;
+    uint32_t gpio_periph;
+#if 0
+    uint32_t volatile steps_left;
+    uint32_t direction;
+#endif
+    uint32_t steps[8]; // 1010 -> 0110 -> 0101 -> 1001
+#if 0
+    uint32_t standby; // 0000
+#endif
+} motor_runtime;
+
+
 /**
     \brief      configure the TIMER peripheral
     \param[in]  none
@@ -170,24 +186,37 @@ static uint32_t const steps[] =
     BOP_SET_BIT(GPIO_PIN_0) | BOP_CLR_BIT(GPIO_PIN_1) | BOP_CLR_BIT(GPIO_PIN_2) | BOP_SET_BIT(GPIO_PIN_3) // 1001
 };
 
-void TIMER1_IRQHandler(void)
+static motor_runtime const motor1 = {
+    .timer = TIMER1,
+    .timer_channel = TIMER_INT_CH0,
+    .gpio_periph = GPIOA,
+    .steps = { 0 }
+};
+
+static
+void process_motor_intr(motor_runtime const * const mrt)
 {
-    bool const ch0_intr = SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH0);
+    bool const ch0_intr = SET == timer_interrupt_flag_get(mrt->timer, mrt->timer_channel);
 
     if (ch0_intr) {
         /* clear channel 0 interrupt bit */
-        timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH0);
+        timer_interrupt_flag_clear(mrt->timer, mrt->timer_channel);
         
         if (steps_left == 0)
         {
             standby();
-            timer_interrupt_disable(TIMER1, TIMER_INT_CH0);
+            timer_interrupt_disable(mrt->timer, mrt->timer_channel);
         }
         else
         {
             uint32_t const idx = steps_left % (sizeof(steps) / sizeof(steps[0]));
-            GPIO_BOP(GPIOA) = steps[idx];
+            GPIO_BOP(mrt->gpio_periph) = steps[idx];
             steps_left -= 1;
         }
     }   
+}
+
+void TIMER1_IRQHandler(void)
+{
+    process_motor_intr(&motor1);
 }
