@@ -47,17 +47,15 @@ static void gpio_config(void)
 {
     /* Configure led GPIO port */ 
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
-
-    // Use PA0 ... PA3 as motor control
-    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ,
-        GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
 }
 
 static void rcu_config(void)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
+    rcu_periph_clock_enable(RCU_GPIOB);
     rcu_periph_clock_enable(RCU_GPIOC);
     rcu_periph_clock_enable(RCU_TIMER1);
+    rcu_periph_clock_enable(RCU_TIMER2);
 }
 
 #define BOP_SET_BIT(X) (X)
@@ -124,13 +122,18 @@ void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in,
     cfg_out->standby =
         BOP_CLR_BIT(cfg_in->pin1) | BOP_CLR_BIT(cfg_in->pin2) | BOP_CLR_BIT(cfg_in->pin3) | BOP_CLR_BIT(cfg_in->pin4);
 
+    gpio_init(cfg_out->gpio_periph, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ,
+        cfg_in->pin1 | cfg_in->pin2 | cfg_in->pin3 | cfg_in->pin4);
+
+    GPIO_BOP(cfg_out->gpio_periph) = cfg_out->standby;
+
     uint32_t step_delay_us = 60 * 1000 * 1000 / cfg_out->steps_per_revolution / rpm;
 
     /* ----------------------------------------------------------------------------
-    TIMER1 Configuration: 
-    TIMER1CLK = SystemCoreClock/108 = 1MHz.
-    TIMER1 configuration is timing mode, and the timing is how many microseconds
-    it takes for two motor steps.
+    Timer Configuration: 
+    Timer CLK = SystemCoreClock/108 = 1MHz.
+    Timer configuration is timing mode, and the timing is how many microseconds
+    it takes for a motor step.
     ---------------------------------------------------------------------------- */
     timer_oc_parameter_struct timer_ocinitpara;
     timer_parameter_struct timer_initpara;
@@ -165,6 +168,7 @@ void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in,
 }
 
 static motor_runtime motor1;
+static motor_runtime motor2;
 
 /*!
     \brief      main function
@@ -188,6 +192,7 @@ int main(void)
     eclic_global_interrupt_enable();
     eclic_set_nlbits(ECLIC_GROUP_LEVEL3_PRIO1);
     eclic_irq_enable(TIMER1_IRQn, 1, 0);
+    eclic_irq_enable(TIMER2_IRQn, 2, 0);
 
     static motor_config const config1 = {
         .steps_per_revolution = 4096,
@@ -200,6 +205,17 @@ int main(void)
         .pin4 = GPIO_PIN_3
     };
 
+    static motor_config const config2 = {
+        .steps_per_revolution = 4096,
+        .timer = TIMER2,
+        .timer_channel = TIMER_INT_CH0,
+        .gpio_periph = GPIOB,
+        .pin1 = GPIO_PIN_6,
+        .pin2 = GPIO_PIN_7,
+        .pin3 = GPIO_PIN_8,
+        .pin4 = GPIO_PIN_9
+    };
+
     int32_t steps = 2048;
 
     while (1)
@@ -207,8 +223,10 @@ int main(void)
         LEDR(1);
 
         motor_configure(&motor1, &config1, steps, 10U);
+        motor_configure(&motor2, &config2, steps, 10U);
 
         while (motor1.steps_left > 0);
+        while (motor2.steps_left > 0);
 
         LEDR(0);
         delay_1ms(1000);
@@ -219,9 +237,9 @@ int main(void)
 static
 void process_motor_intr(motor_runtime * const mrt)
 {
-    bool const ch0_intr = SET == timer_interrupt_flag_get(mrt->timer, mrt->timer_channel);
+    bool const ch_intr = SET == timer_interrupt_flag_get(mrt->timer, mrt->timer_channel);
 
-    if (ch0_intr) {
+    if (ch_intr) {
         /* clear channel 0 interrupt bit */
         timer_interrupt_flag_clear(mrt->timer, mrt->timer_channel);
 
@@ -259,4 +277,9 @@ void process_motor_intr(motor_runtime * const mrt)
 void TIMER1_IRQHandler(void)
 {
     process_motor_intr(&motor1);
+}
+
+void TIMER2_IRQHandler(void)
+{
+    process_motor_intr(&motor2);
 }
