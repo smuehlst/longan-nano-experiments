@@ -37,6 +37,11 @@ OF SUCH DAMAGE.
 #include "gd32v_pjt_include.h"
 #include "systick.h"
 
+#define MOTOR_1 1
+#define MOTOR_2 1
+#define MOTOR_3 1
+#define MOTOR_4 1
+
 /**
     \brief      configure the GPIO ports
     \param[in]  none
@@ -54,8 +59,18 @@ static void rcu_config(void)
     rcu_periph_clock_enable(RCU_GPIOA);
     rcu_periph_clock_enable(RCU_GPIOB);
     rcu_periph_clock_enable(RCU_GPIOC);
+#if MOTOR_1
     rcu_periph_clock_enable(RCU_TIMER1);
+#endif
+#if MOTOR_2
     rcu_periph_clock_enable(RCU_TIMER2);
+#endif
+#if MOTOR_3
+    rcu_periph_clock_enable(RCU_TIMER3);
+#endif
+#if MOTOR_4
+    rcu_periph_clock_enable(RCU_TIMER4);
+#endif
 }
 
 #define BOP_SET_BIT(X) (X)
@@ -167,8 +182,18 @@ void motor_configure(motor_runtime *cfg_out, motor_config const *cfg_in,
     timer_enable(cfg_out->timer);
 }
 
+#if MOTOR_1
 static motor_runtime motor1;
+#endif
+#if MOTOR_2
 static motor_runtime motor2;
+#endif
+#if MOTOR_3
+static motor_runtime motor3;
+#endif
+#if MOTOR_4
+static motor_runtime motor4;
+#endif
 
 /*!
     \brief      main function
@@ -191,9 +216,20 @@ int main(void)
 
     eclic_global_interrupt_enable();
     eclic_set_nlbits(ECLIC_GROUP_LEVEL3_PRIO1);
+#if MOTOR_1
     eclic_irq_enable(TIMER1_IRQn, 1, 0);
+#endif
+#if MOTOR_2
     eclic_irq_enable(TIMER2_IRQn, 2, 0);
+#endif
+#if MOTOR_3
+    eclic_irq_enable(TIMER3_IRQn, 3, 0);
+#endif
+#if MOTOR_4
+    eclic_irq_enable(TIMER4_IRQn, 4, 0);
+#endif
 
+#if MOTOR_1
     static motor_config const config1 = {
         .steps_per_revolution = 4096,
         .timer = TIMER1,
@@ -204,7 +240,9 @@ int main(void)
         .pin3 = GPIO_PIN_2,
         .pin4 = GPIO_PIN_3
     };
+#endif
 
+#if MOTOR_2
     static motor_config const config2 = {
         .steps_per_revolution = 4096,
         .timer = TIMER2,
@@ -215,18 +253,65 @@ int main(void)
         .pin3 = GPIO_PIN_8,
         .pin4 = GPIO_PIN_9
     };
+#endif
 
-    int32_t steps = 2048;
+#if MOTOR_3
+    static motor_config const config3 = {
+        .steps_per_revolution = 4096,
+        .timer = TIMER3,
+        .timer_channel = TIMER_INT_CH0,
+        .gpio_periph = GPIOB,
+        .pin1 = GPIO_PIN_0,
+        .pin2 = GPIO_PIN_1,
+        .pin3 = GPIO_PIN_10,
+        .pin4 = GPIO_PIN_11
+    };
+#endif
+
+#if MOTOR_4
+    static motor_config const config4 = {
+        .steps_per_revolution = 4096,
+        .timer = TIMER4,
+        .timer_channel = TIMER_INT_CH0,
+        .gpio_periph = GPIOB,
+        .pin1 = GPIO_PIN_12,
+        .pin2 = GPIO_PIN_13,
+        .pin3 = GPIO_PIN_14,
+        .pin4 = GPIO_PIN_15
+    };
+#endif
+
+    static int32_t steps = 2048;
 
     while (1)
     {
         LEDR(1);
 
+#if MOTOR_1
         motor_configure(&motor1, &config1, steps, 10U);
-        motor_configure(&motor2, &config2, steps, 10U);
+#endif
+#if MOTOR_2
+        motor_configure(&motor2, &config2, steps, 5U);
+#endif
+#if MOTOR_3
+        motor_configure(&motor3, &config3, steps, 6U);
+#endif
+#if MOTOR_4
+        motor_configure(&motor4, &config4, steps, 7U);
+#endif
 
+#if MOTOR_1
         while (motor1.steps_left > 0);
+#endif
+#if MOTOR_2
         while (motor2.steps_left > 0);
+#endif
+#if MOTOR_3
+        while (motor3.steps_left > 0);
+#endif
+#if MOTOR_4
+        while (motor4.steps_left > 0);
+#endif
 
         LEDR(0);
         delay_1ms(1000);
@@ -274,12 +359,30 @@ void process_motor_intr(motor_runtime * const mrt)
     }
 }
 
+#if MOTOR_1
 void TIMER1_IRQHandler(void)
 {
     process_motor_intr(&motor1);
 }
+#endif
 
+#if MOTOR_2
 void TIMER2_IRQHandler(void)
 {
     process_motor_intr(&motor2);
 }
+#endif
+
+#if MOTOR_3
+void TIMER3_IRQHandler(void)
+{
+    process_motor_intr(&motor3);
+}
+#endif
+
+#if MOTOR_4
+void TIMER4_IRQHandler(void)
+{
+    process_motor_intr(&motor4);
+}
+#endif
