@@ -201,6 +201,7 @@ void Lcd_Init(void)
  	rcu_periph_clock_enable(RCU_AF);
 	rcu_periph_clock_enable(RCU_SPI0);
 	/* SPI0 GPIO config: NSS/PA4, SCK/PA5, MOSI/PA7 */
+	/* NSS : not used, GPIO_PIN_6 not used!? */
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_5 |GPIO_PIN_6| GPIO_PIN_7);
 	gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_2);
 
