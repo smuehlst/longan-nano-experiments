@@ -20,31 +20,25 @@ void longan_spi_init()
 	rcu_periph_clock_enable(RCU_SPI1);
 	rcu_periph_clock_enable(RCU_AF);
 
-	/* SPI SCK, SPI MOSI GPIO pin configuration */
-	gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_15 | GPIO_PIN_13);
+	/* SPI SCK/PB13, SPI MISO/PB14, SPI MOSI/PB15 GPIO pin configuration */
+	gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_15 | GPIO_PIN_14 | GPIO_PIN_13);
 
-	/* SPI MISO GPIO pin configuration */
-	gpio_init(GPIOB, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_14);
-
-	/* SPI CS GPIO pin configuration,
-	* GPIO_MODE_OUT_PP as it is controlled in software.
-	*/
-	// gpio_init(SPI1, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
-	gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
+	/* SPI CS/PB12 GPIO pin configuration,
+	 * GPIO_MODE_OUT_PP as it is controlled in software.
+	 */
+    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_12);
 
 	/* CS disabled */
 	gpio_bit_set(GPIOB, GPIO_PIN_12);
 
     spi_parameter_struct spi_init_struct;
  
-    /* deinitilize SPI and the parameters */
+    /* deinitialize SPI and the parameters */
     spi_i2s_deinit(SPI1);
     spi_struct_para_init(&spi_init_struct);
 
     /* SPI1 parameter config */
-    /* Remove comment from line with SPI_TRANSMODE_FULLDUPLEX to test that */
-    spi_init_struct.trans_mode           = SPI_TRANSMODE_RECEIVEONLY; // SCK signal can be observed
-    // spi_init_struct.trans_mode           = SPI_TRANSMODE_FULLDUPLEX; // SPI_TRANSMODE_FULLDUPLEX does not work, no SCK signal
+    spi_init_struct.trans_mode           = SPI_TRANSMODE_FULLDUPLEX;
     spi_init_struct.device_mode          = SPI_MASTER;
     spi_init_struct.frame_size           = SPI_FRAMESIZE_8BIT;
     spi_init_struct.clock_polarity_phase = SPI_CK_PL_LOW_PH_2EDGE;
@@ -82,18 +76,26 @@ void longan_led_off()
 */
 int main(void)
 {
+    uint32_t volatile counter = 0;
+
     longan_led_init();
     longan_spi_init();
 
+    spi_enable(SPI1);
     while (1) {
         longan_led_on();
-        spi_enable(SPI1);
         gpio_bit_reset(GPIOB, GPIO_PIN_12);
-        delay_1ms(20);
+
+        while(RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_TBE));
+        spi_i2s_data_transmit(SPI1, (uint16_t) counter);
+
+	    while(RESET == spi_i2s_flag_get(SPI1, SPI_FLAG_RBNE));
+        uint16_t volatile indata = spi_i2s_data_receive(SPI1);
 
         longan_led_off();
-        spi_disable(SPI1);
         gpio_bit_set(GPIOB, GPIO_PIN_12);
-        delay_1ms(20);
+        delay_1ms(1);
+
+        counter += 1;
     }
 }
