@@ -1,0 +1,34 @@
+// AUTOMATICALLY GENERATED FILE. PLEASE DO NOT MODIFY IT MANUALLY
+
+// PIO Unified Debugger
+//
+// Documentation: https://docs.platformio.org/page/plus/debugging.html
+// Configuration: https://docs.platformio.org/page/projectconf/section_env_debug.html
+
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "platformio-debug",
+            "request": "launch",
+            "name": "PIO Debug",
+            "executable": "e:/Users/stm/Documents/GitHub/longannano/longan-nano-experiments/spi-dma-test/.pio/build/sipeed-longan-nano/firmware.elf",
+            "toolchainBinDir": "C:/.platformio/packages/toolchain-gd32v/bin",
+            "svdPath": "C:/.platformio/platforms/gd32v/misc/svd/GD32VF103.svd",
+            "preLaunchTask": {
+                "type": "PlatformIO",
+                "task": "Pre-Debug"
+            },
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "platformio-debug",
+            "request": "launch",
+            "name": "PIO Debug (skip Pre-Debug)",
+            "executable": "e:/Users/stm/Documents/GitHub/longannano/longan-nano-experiments/spi-dma-test/.pio/build/sipeed-longan-nano/firmware.elf",
+            "toolchainBinDir": "C:/.platformio/packages/toolchain-gd32v/bin",
+            "svdPath": "C:/.platformio/platforms/gd32v/misc/svd/GD32VF103.svd",
+            "internalConsoleOptions": "openOnSessionStart"
+        }
+    ]
+}

@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "gd32vf103.h": "c",
+        "system_gd32vf103.h": "c"
+    }
+}

@@ -1,0 +1,51 @@
+{
+    "configurations": [
+        {
+            "name": "!!! WARNING !!! AUTO-GENERATED FILE, PLEASE DO NOT MODIFY IT AND USE https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags"
+        },
+        {
+            "name": "Win32",
+            "includePath": [
+                "e:/Users/stm/Documents/GitHub/longannano/longan-nano-experiments/spi-dma-test/include",
+                "e:/Users/stm/Documents/GitHub/longannano/longan-nano-experiments/spi-dma-test/src",
+                "C:/.platformio/packages/framework-gd32vf103-sdk/GD32VF103_standard_peripheral",
+                "C:/.platformio/packages/framework-gd32vf103-sdk/GD32VF103_standard_peripheral/Include",
+                "C:/.platformio/packages/framework-gd32vf103-sdk/GD32VF103_usbfs_driver",
+                "C:/.platformio/packages/framework-gd32vf103-sdk/GD32VF103_usbfs_driver/Include",
+                "C:/.platformio/packages/framework-gd32vf103-sdk/RISCV/drivers",
+                "C:/.platformio/packages/framework-gd32vf103-sdk/RISCV/env_Eclipse",
+                "C:/.platformio/packages/framework-gd32vf103-sdk/RISCV/stubs",
+                "C:/.platformio/packages/tool-unity",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "e:/Users/stm/Documents/GitHub/longannano/longan-nano-experiments/spi-dma-test/include",
+                    "e:/Users/stm/Documents/GitHub/longannano/longan-nano-experiments/spi-dma-test/src",
+                    "C:/.platformio/packages/framework-gd32vf103-sdk/GD32VF103_standard_peripheral",
+                    "C:/.platformio/packages/framework-gd32vf103-sdk/GD32VF103_standard_peripheral/Include",
+                    "C:/.platformio/packages/framework-gd32vf103-sdk/GD32VF103_usbfs_driver",
+                    "C:/.platformio/packages/framework-gd32vf103-sdk/GD32VF103_usbfs_driver/Include",
+                    "C:/.platformio/packages/framework-gd32vf103-sdk/RISCV/drivers",
+                    "C:/.platformio/packages/framework-gd32vf103-sdk/RISCV/env_Eclipse",
+                    "C:/.platformio/packages/framework-gd32vf103-sdk/RISCV/stubs",
+                    "C:/.platformio/packages/tool-unity",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=40101",
+                "USE_STDPERIPH_DRIVER",
+                "HXTAL_VALUE=8000000U",
+                "__PLATFORMIO_BUILD_DEBUG__",
+                ""
+            ],
+            "intelliSenseMode": "clang-x64",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "compilerPath": "\"C:/.platformio/packages/toolchain-gd32v/bin/riscv-nuclei-elf-gcc.exe\" -march=rv32imac -mabi=ilp32 -mcmodel=medlow"
+        }
+    ],
+    "version": 4
+}
