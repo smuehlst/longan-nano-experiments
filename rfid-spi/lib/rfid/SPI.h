@@ -35,27 +35,6 @@ public:
 
 class SPIClass {
 private:
-#if 0
-    uint32_t _dev;
-    uint32_t _dev_clk;
-    uint32_t _mosi_bank;
-    uint32_t _miso_bank;
-    uint32_t _sclk_bank;
-    uint32_t _ssel_bank;
-    uint32_t _mosi_bit;
-    uint32_t _miso_bit;
-    uint32_t _sclk_bit;
-    uint32_t _ssel_bit;
-    uint32_t _mosi_bank_clk;
-    uint32_t _miso_bank_clk;
-    uint32_t _sclk_bank_clk;
-    uint32_t _ssel_bank_clk;
-    uint8_t _dataMode;
-    uint8_t _bitOrder;
-    uint32_t _freq;
-    uint8_t _ssel_hard;
-#endif
-
     uint32_t _spi_periph;
     uint32_t _spi_gpio;
     rcu_periph_enum _rcu_periph_gpio;
@@ -64,8 +43,6 @@ private:
     uint32_t _miso;
     uint32_t _sclk;
     uint32_t _ssel;
-
-    // void beginTransaction();
 
 public:
     SPIClass(uint32_t spi_periph, uint32_t spi_gpio,
@@ -192,12 +169,6 @@ public:
 
         gpio_bit_set(_spi_gpio, _ssel);
     }
-
-#if 0
-    void setBitOrder(uint8_t bitOrder);
-    void setDataMode(uint8_t dataMode);
-    void setFrequency(uint32_t freq);
-#endif
 };
 
 }
