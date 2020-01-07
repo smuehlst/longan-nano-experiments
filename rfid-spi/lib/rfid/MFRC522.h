@@ -338,6 +338,10 @@ public:
 	DEPRECATED_MSG("use MFRC522(byte chipSelectPin, byte resetPowerDownPin)")
 	MFRC522(byte resetPowerDownPin);
 	MFRC522(byte chipSelectPin, byte resetPowerDownPin);
+	MFRC522(uint32_t spi_periph, uint32_t spi_gpio,
+        rcu_periph_enum rcu_periph_gpio,
+        rcu_periph_enum rcu_periph_spi,
+        uint32_t mosi, uint32_t miso, uint32_t sclk, uint32_t ssel);
 	
 	/////////////////////////////////////////////////////////////////////////////////////
 	// Basic interface functions for communicating with the MFRC522
@@ -432,6 +436,9 @@ public:
 	/////////////////////////////////////////////////////////////////////////////////////
 	virtual bool PICC_IsNewCardPresent();
 	virtual bool PICC_ReadCardSerial();
+
+private:
+	replacement::SPIClass spi;
 	
 protected:
 	byte _chipSelectPin;		// Arduino pin connected to MFRC522's SPI slave select input (Pin 24, NSS, active low)
