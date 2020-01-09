@@ -6,9 +6,12 @@
 extern "C" {
 #include "lcd/lcd.h"
 }
+#include "lcdlog.h"
 
 MFRC522 mfrc522(SPI1, GPIOB, RCU_GPIOB, RCU_SPI1,
           GPIO_PIN_15, GPIO_PIN_14, GPIO_PIN_13, GPIO_PIN_12);  // Create MFRC522 instance
+
+LcdLog lcdLog;
 
 static void gpio_config(void)
 {
@@ -44,6 +47,7 @@ void setup()
 
 	gpio_config();
 
+	longan_oled_init();
 	longan_oled_init();
 
 	longan_led_init();

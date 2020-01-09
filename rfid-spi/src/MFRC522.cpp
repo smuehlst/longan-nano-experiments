@@ -66,12 +66,11 @@ void MFRC522::PCD_WriteRegister(	PCD_Register reg,	///< The register to write to
 									byte value			///< The value to write.
 								) {
 	gpio_bit_write(GPIOA, GPIO_PIN_2, (bit_status)(1-gpio_input_bit_get(GPIOA, GPIO_PIN_2))); // LED
-	// delay(500);
-	spi.beginTransaction();	// Set the settings to work with SPI bus
-
+	
 	uint8_t data[] = { reg, value };
-	spi.transfer(data, sizeof(data) / sizeof(data[0]), UINT32_MAX);						// MSB == 0 is for writing. LSB is not used in address. Datasheet section 8.1.2.3.
 
+	spi.beginTransaction();	// Set the settings to work with SPI bus
+	spi.transfer(data, sizeof(data) / sizeof(data[0]), UINT32_MAX);						// MSB == 0 is for writing. LSB is not used in address. Datasheet section 8.1.2.3.
 	spi.endTransaction(); // Stop using the SPI bus
 } // End PCD_WriteRegister()
 

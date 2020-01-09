@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+#include "lcdlog.h"
+
 namespace replacement
 {
 
@@ -115,10 +117,12 @@ public:
     // timeout in ms
     void transfer(uint8_t const *data, uint32_t size, uint32_t timeout = 1)
     {
+        LcdLog::lcdLog.logBytes((const u8 *) data, static_cast<unsigned int>(size), WHITE);
+
         uint64_t const startT = millis();
 
         gpio_bit_reset(_spi_gpio, _ssel);
-
+ 
         for (size_t i = 0; i < size; i++)
         {
             while (!spi_i2s_flag_get(_spi_periph, SPI_FLAG_TBE))
@@ -139,6 +143,9 @@ public:
     void transfer(
         uint8_t const *txdata, uint8_t *rxdata, uint32_t size, uint32_t timeout = 1)
     {
+        LcdLog::lcdLog.logBytes((const u8 *) txdata, static_cast<unsigned int>(size), WHITE);
+        uint8_t const * const rxdata_sav = rxdata;
+
         uint64_t const startT = millis();
 
         gpio_bit_reset(_spi_gpio, _ssel);
@@ -168,6 +175,8 @@ public:
         }
 
         gpio_bit_set(_spi_gpio, _ssel);
+
+        LcdLog::lcdLog.logBytes((const u8 *) rxdata_sav, static_cast<unsigned int>(size), GREEN);
     }
 };
 
