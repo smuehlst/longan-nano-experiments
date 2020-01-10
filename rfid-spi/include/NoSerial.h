@@ -2,6 +2,7 @@
 #define NOSERIAL_H
 
 #include <Arduino.h>
+#include "gd32vf103_libopt.h"
 
 class Serial_ : public Stream
 {
@@ -13,9 +14,9 @@ public:
   virtual int peek() { return 0; }
   virtual void flush() {}
 
-  virtual size_t write(uint8_t) { return 0; }
+  virtual size_t write(uint8_t c) { return fwrite(&c, 1, 1, stdout); }
 };
 
-static Serial_ Serial;
+extern Serial_ Serial;
 
 #endif // NOSERIAL_H

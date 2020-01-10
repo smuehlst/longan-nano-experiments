@@ -236,7 +236,7 @@ void MFRC522::PCD_Init() {
 #endif
 	
 	// If a valid pin number has been set, pull device out of power down / reset state.
-	if (false && _resetPowerDownPin != UNUSED_PIN) {
+	if (_resetPowerDownPin != UNUSED_PIN) {
 		// First set the resetPowerDownPin as digital input, to check the MFRC522 power down mode.
 		pinMode(_resetPowerDownPin, INPUT);
 	

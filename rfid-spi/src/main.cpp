@@ -41,16 +41,50 @@ static void longan_oled_init(void)
     BACK_COLOR = BLACK;
 }
 
+static void longan_serial_init(void)
+{
+	/* connect port to USARTx_Tx */
+    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
+
+    /* connect port to USARTx_Rx */
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+
+    /* USART configure */
+    usart_deinit(USART0);
+    usart_baudrate_set(USART0, 115200U);
+    usart_word_length_set(USART0, USART_WL_8BIT);
+    usart_stop_bit_set(USART0, USART_STB_1BIT);
+    usart_parity_config(USART0, USART_PM_NONE);
+    usart_hardware_flow_rts_config(USART0, USART_RTS_DISABLE);
+    usart_hardware_flow_cts_config(USART0, USART_CTS_DISABLE);
+    usart_receive_config(USART0, USART_RECEIVE_ENABLE);
+    usart_transmit_config(USART0, USART_TRANSMIT_ENABLE);
+    usart_enable(USART0);
+}
+
+/* retarget the C library printf function to the USART */
+int _put_char(int ch)
+{
+    usart_data_transmit(USART0, (uint8_t) ch );
+    while (usart_flag_get(USART0, USART_FLAG_TBE) == RESET){
+    }
+
+    return ch;
+}
+
 void setup()
 {
 	rcu_config();
 
 	gpio_config();
 
+	longan_serial_init();
 	longan_oled_init();
 	longan_oled_init();
 
 	longan_led_init();
+
+    Serial.println("Started");
 
 	mfrc522.PCD_Init();				   // Init MFRC522
 	delay(4);						   // Optional delay. Some board do need more time after init to be ready, see Readme
