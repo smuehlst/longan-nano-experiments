@@ -15,5 +15,6 @@ jobs:
         echo test, and deploy your project.
     - name: Install PlatformIO
       run: |
+        pip install wheel
         pip install -U platformio
         platformio --version
