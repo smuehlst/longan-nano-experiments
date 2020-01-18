@@ -19,4 +19,5 @@ jobs:
       run: |
         pip install wheel
         pip install -U platformio
-        $HOME/.platformio/penv/bin/platformio --version
+        # $HOME/.platformio/penv/bin/platformio --version
+        find $HOME -name platformio
