@@ -13,8 +13,10 @@ jobs:
       run: |
         echo Add other actions to build,
         echo test, and deploy your project.
+        pwd
+        ls -a
     - name: Install PlatformIO
       run: |
         pip install wheel
         pip install -U platformio
-        platformio --version
+        $HOME/.platformio/penv/bin/platformio --version
