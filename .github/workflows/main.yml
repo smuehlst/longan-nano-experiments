@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      MYVAR: ${{ format('{0}:{1}', {{ env.PATH }}, {{ env.HOME }} ) }}
+      MYVAR: ${{ format('{0}:{1}', env.PATH, env.HOME ) }}
       
     steps:
     - uses: actions/checkout@v1
