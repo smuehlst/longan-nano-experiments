@@ -4,7 +4,9 @@ on: [push]
 
 jobs:
   build:
-
+    env:
+      BARTZ: ${{ format('{1}:{2}', env.PATH, env.HOME) }}
+      
     runs-on: ubuntu-latest
 
     steps:
@@ -16,6 +18,7 @@ jobs:
         ls -a
         FOO=test
         echo "FOO is '$FOO'"
+        echo "BARTZ is '$BARTZ'"
         
     - name: Install PlatformIO
       run: |
