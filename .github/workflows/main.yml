@@ -4,13 +4,16 @@ on: [push]
 
 jobs:
   build:
-    env:
-      BARTZ: ${{ format('{1}:{2}', ${{ env.PATH }}, ${{ env.HOME }} ) }}
-      
     runs-on: ubuntu-latest
 
+    env:
+      MYVAR: ${{ format('{1}:{2}', ${{ env.PATH }}, ${{ env.HOME }} ) }}
+      
     steps:
     - uses: actions/checkout@v1
+      
+    - name: Check environment
+      run: echo $MYVAR
       
     - name: Run a multi-line script
       run: |
@@ -18,7 +21,6 @@ jobs:
         ls -a
         FOO=test
         echo "FOO is '$FOO'"
-        echo "BARTZ is '$BARTZ'"
         
     - name: Install PlatformIO
       run: |
