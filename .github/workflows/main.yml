@@ -9,18 +9,24 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+      
     - name: Run a multi-line script
       run: |
-        sudo apt-get install dfu-util
-        dfu-util --version
         pwd
         ls -a
+        
     - name: Install PlatformIO
       run: |
+        sudo apt-get --assume-yes install dfu-util
         pip install wheel
         pip install -U platformio
         $HOME/.local/bin/platformio --version
-        find $HOME -name dfu-suffix
+        dfu-util --version
+        
     - name: Build Stepper
       run: |
-        : $HOME/.local/bin/platformio run -d stepper -v
+        $HOME/.local/bin/platformio run -d stepper -v
+        
+    - name: Build MAX6675
+      run: |
+        $HOME/.local/bin/platformio run -d max6675 -v
