@@ -18,6 +18,7 @@ jobs:
         pip install wheel
         pip install -U platformio
         $HOME/.local/bin/platformio --version
+        find $HOME -name dfu-suffix
     - name: Build Stepper
       run: |
-        $HOME/.local/bin/platformio run -d stepper -v
+        : $HOME/.local/bin/platformio run -d stepper -v
