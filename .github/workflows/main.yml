@@ -5,7 +5,7 @@ on: [push]
 jobs:
   build:
     env:
-      BARTZ: ${{ format('{1}:{2}', {{ env.PATH }}, {{ env.HOME }} ) }}
+      BARTZ: ${{ format('{1}:{2}', ${{ env.PATH }}, ${{ env.HOME }} ) }}
       
     runs-on: ubuntu-latest
 
