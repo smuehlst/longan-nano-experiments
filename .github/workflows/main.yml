@@ -21,7 +21,7 @@ jobs:
         echo "MYVAR is '$MYVAR'"
         
     - name: Cache PlatformIO
-      id: platformio-cache-id
+      id: platformio-cache-pip-id
       uses: actions/cache@v1
       with:
         path: ~/.cache/pip
@@ -36,8 +36,17 @@ jobs:
         path: ~/.local
         key: ${{ runner.os }}-platformio-bin
 
+    - name: Cache PlatformIO Packages
+      id: platformio-packages-cache-id
+      uses: actions/cache@v1
+      with:
+        path: ~/.platformio
+        key: ${{ runner.os }}-platformio-packages-${{ hashFiles('**/platformio.ini') }}
+
     - name: Install PlatformIO
-      if: steps.platformio-cache-id.outputs.cache-hit != 'true'
+      if: steps.platformio-cache-pip-id.outputs.cache-hit != 'true' ||
+        steps.platformio-bin-cache-id.outputs.cache-hit != 'true' ||
+        steps.platformio-packages-cache-id.outputs.cache-hit != 'true'
       run: |
         pip install -r requirements.txt
         $HOME/.local/bin/platformio --version
