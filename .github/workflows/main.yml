@@ -39,8 +39,7 @@ jobs:
     - name: Install PlatformIO
       if: steps.platformio-cache-id.outputs.cache-hit != 'true'
       run: |
-        pip install wheel
-        pip install -U platformio
+        pip install -r requirements.txt
         $HOME/.local/bin/platformio --version
         
     - name: Install dfu-util
