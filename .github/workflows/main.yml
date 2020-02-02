@@ -8,18 +8,7 @@ jobs:
       
     steps:
     - uses: actions/checkout@v1
-      
-    - name: Set
-      run: echo ::set-env name=MYVAR::$(echo "$PATH:$HOME")
-      
-    - name: Run a multi-line script
-      run: |
-        pwd
-        ls -a
-        FOO=test
-        echo "FOO is '$FOO'"
-        echo "MYVAR is '$MYVAR'"
-        
+              
     - name: Cache PlatformIO
       id: platformio-cache-pip-id
       uses: actions/cache@v1
