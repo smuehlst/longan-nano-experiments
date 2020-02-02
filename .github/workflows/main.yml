@@ -20,14 +20,32 @@ jobs:
         echo "FOO is '$FOO'"
         echo "MYVAR is '$MYVAR'"
         
+    - name: Cache PlatformIO
+      id: platformio-cache-id
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache PlatformIO Binary
+      id: platformio-bin-cache-id
+      with:
+        path: ~/.local
+        key: ${{ runner.os }}-platformio-bin
+
     - name: Install PlatformIO
+      if: steps.platformio-cache-id.outputs.cache-hit != 'true'
       run: |
-        sudo apt-get --assume-yes install dfu-util
         pip install wheel
         pip install -U platformio
         $HOME/.local/bin/platformio --version
-        dfu-util --version
         
+    - name: Install dfu-util
+      run: |
+        sudo apt-get --assume-yes install dfu-util
+        dfu-util --version
+
     - name: Build Stepper
       run: |
         $HOME/.local/bin/platformio run -d stepper -v
