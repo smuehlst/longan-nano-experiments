@@ -5,10 +5,26 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [ { a: "a", b: "eins" }, { a: "a", b: "zwei" } ]
       
     steps:
     - uses: actions/checkout@v1
-              
+    
+    - name: Alternative eins
+      if: matrix.config.b == 'eins'
+      run: echo ::set-env name=ENV_B::$(echo "EINS")
+ 
+    - name: Alternative zwei
+      if: matrix.config.b == 'zwei'
+      run: echo ::set-env name=ENV_B::$(echo "ZWEI")
+    
+    - name: Alternative use
+      run: echo $ENV_B
+
     - name: Cache PlatformIO
       id: platformio-cache-pip-id
       uses: actions/cache@v1
