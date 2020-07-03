@@ -94,6 +94,8 @@ void setup()
 }
 
 void loop() {
+    delay_1ms(500);
+    
 	// Reset the loop if no new card present on the sensor/reader. This saves the entire process when idle.
 	if ( ! mfrc522.PICC_IsNewCardPresent()) {
 		return;
@@ -106,7 +108,7 @@ void loop() {
 		return;
 	}
 
-  LEDB_TOG;
+    LEDB_TOG;
 
 	// Dump debug info about the card; PICC_HaltA() is automatically called
 	mfrc522.PICC_DumpToSerial(&(mfrc522.uid));

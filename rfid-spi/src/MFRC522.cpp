@@ -536,7 +536,9 @@ MFRC522::StatusCode MFRC522::PCD_CommunicateWithPICC(	byte command,		///< The co
 	
 	// Stop now if any errors except collisions were detected.
 	byte errorRegValue = PCD_ReadRegister(ErrorReg); // ErrorReg[7..0] bits are: WrErr TempErr reserved BufferOvfl CollErr CRCErr ParityErr ProtocolErr
+	printf("errorRegValue 0x%02x\r\n", errorRegValue);
 	if (errorRegValue & 0x13) {	 // BufferOvfl ParityErr ProtocolErr
+		printf("errorRegValue STATUS_ERROR\r\n");
 		return STATUS_ERROR;
 	}
   
@@ -623,15 +625,18 @@ MFRC522::StatusCode MFRC522::PICC_REQA_or_WUPA(	byte command, 		///< The command
 	MFRC522::StatusCode status;
 	
 	if (bufferATQA == nullptr || *bufferSize < 2) {	// The ATQA response is 2 bytes long.
+		printf("PICC_REQA_or_WUPA STATUS_NO_ROOM\r\n");
 		return STATUS_NO_ROOM;
 	}
 	PCD_ClearRegisterBitMask(CollReg, 0x80);		// ValuesAfterColl=1 => Bits received after collision are cleared.
 	validBits = 7;									// For REQA and WUPA we need the short frame format - transmit only 7 bits of the last (and only) byte. TxLastBits = BitFramingReg[2..0]
 	status = PCD_TransceiveData(&command, 1, bufferATQA, bufferSize, &validBits);
 	if (status != STATUS_OK) {
+		printf("PICC_REQA_or_WUPA PCD_TransceiveData status %u\r\n", status);
 		return status;
 	}
 	if (*bufferSize != 2 || validBits != 0) {		// ATQA must be exactly 16 bits.
+		printf("PICC_REQA_or_WUPA *bufferSize %u validBits %u\r\n", *bufferSize, validBits);
 		return STATUS_ERROR;
 	}
 	return STATUS_OK;
@@ -1954,6 +1959,7 @@ bool MFRC522::PICC_IsNewCardPresent() {
 	PCD_WriteRegister(ModWidthReg, 0x26);
 
 	MFRC522::StatusCode result = PICC_RequestA(bufferATQA, &bufferSize);
+	printf("PICC_IsNewCardPresent result = %u\r\n", result);
 	return (result == STATUS_OK || result == STATUS_COLLISION);
 } // End PICC_IsNewCardPresent()
 
