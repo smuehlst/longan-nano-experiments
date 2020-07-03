@@ -55,9 +55,12 @@ void gpio_config(void)
     rcu_periph_clock_enable(RCU_GPIOC);
     rcu_periph_clock_enable(RCU_AF);
 
-    /*configure PA0(TIMER1 CH0) as alternate function*/
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_0);
+    /*configure PA0(TIMER1 CH0) as alternate function
+    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_0);*/
     
+    /*configure PA0(TIMER1 CH1) as alternate function */
+    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_1);
+
     /*configure PA6(TIMER2 CH0) as alternate function*/
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_6);
 
@@ -121,11 +124,11 @@ void timer_config(void)
     timer_ocinitpara.ocnpolarity  = TIMER_OCN_POLARITY_HIGH;
     timer_ocinitpara.ocidlestate  = TIMER_OC_IDLE_STATE_LOW;
     timer_ocinitpara.ocnidlestate = TIMER_OCN_IDLE_STATE_LOW;
-    timer_channel_output_config(TIMER1, TIMER_CH_0, &timer_ocinitpara);
+    timer_channel_output_config(TIMER1, TIMER_CH_1, &timer_ocinitpara);
 
-    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_0, 2000);
-    timer_channel_output_mode_config(TIMER1, TIMER_CH_0, TIMER_OC_MODE_PWM0);
-    timer_channel_output_shadow_config(TIMER1, TIMER_CH_0, TIMER_OC_SHADOW_DISABLE);
+    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_1, 2000);
+    timer_channel_output_mode_config(TIMER1, TIMER_CH_1, TIMER_OC_MODE_PWM0);
+    timer_channel_output_shadow_config(TIMER1, TIMER_CH_1, TIMER_OC_SHADOW_DISABLE);
 
     /* auto-reload preload enable */
     timer_auto_reload_shadow_enable(TIMER1);
@@ -208,7 +211,7 @@ void timer_config(void)
     timer_input_trigger_source_select(TIMER0, TIMER_SMCFG_TRGSEL_ITI1);
 #endif
 
-    timer_interrupt_enable(TIMER1, TIMER_INT_CH0);
+    timer_interrupt_enable(TIMER1, TIMER_INT_CH1);
     timer_interrupt_enable(TIMER2, TIMER_INT_CH0);
 
     /* TIMER counter enable */
@@ -245,10 +248,10 @@ void TIMER1_IRQHandler(void)
 {
     static uint32_t counter;
 
-    if (SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH0))
+    if (SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH1))
     {
         /* clear channel 0 interrupt bit */
-        timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH0);
+        timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH1);
 
         LEDR_TOG;
 
