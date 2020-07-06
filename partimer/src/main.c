@@ -57,7 +57,7 @@ void gpio_config(void)
     rcu_periph_clock_enable(RCU_GPIOC);
     rcu_periph_clock_enable(RCU_AF);
 
-    /*configure PA0(TIMER1 CH3) as alternate function */
+    /*configure PA3(TIMER1 CH3) as alternate function */
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_3);
 
     /*configure PA6(TIMER2 CH0) as alternate function*/
@@ -109,7 +109,7 @@ void timer_config(void)
 
     /* initialize TIMER channel output parameter struct */
     timer_channel_output_struct_para_init(&timer_ocinitpara);
-    /* CH1 configuration in PWM0 mode */
+    /* CH3 configuration in PWM0 mode */
     timer_ocinitpara.outputstate  = TIMER_CCX_ENABLE;
     timer_ocinitpara.outputnstate = TIMER_CCXN_DISABLE;
     timer_ocinitpara.ocpolarity   = TIMER_OC_POLARITY_HIGH;
@@ -166,7 +166,7 @@ void timer_config(void)
     /* TIMER2 update event is used as trigger output */
     timer_master_output_trigger_source_select(TIMER2, TIMER_TRI_OUT_SRC_UPDATE);
 
-    timer_interrupt_enable(TIMER1, TIMER_INT_CH1);
+    timer_interrupt_enable(TIMER1, TIMER_INT_CH3);
     timer_interrupt_enable(TIMER2, TIMER_INT_CH0);
 
     /* TIMER counter enable */
@@ -203,10 +203,10 @@ volatile uint64_t mymcycle;
 
 void TIMER1_IRQHandler(void)
 {
-    if (SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH1))
+    if (SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH3))
     {
-        /* clear channel 0 interrupt bit */
-        timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH1);
+        /* clear channel 3 interrupt bit */
+        timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH3);
 
         LEDR_TOG;
 
