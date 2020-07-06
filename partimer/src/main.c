@@ -1,8 +1,10 @@
 /*!
     \file  main.c
-    \brief TIMERs parallel synchro demo
+    \brief based on GD32VF103 SDK TIMERs_parallelsynchro demo
     
-    \version 2019-6-5, V1.0.0, firmware for GD32VF103
+    Run two timers in parallel. Enable the machine cycle counter and
+    assign it to a volatile variable so that it can be observed in
+    a debugger.
 */
 
 /*
@@ -36,6 +38,7 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include "gd32v_pjt_include.h"
 #include "systick.h"
+#include "riscv_encoding.h"
 
 /* configure the GPIO ports */
 void gpio_config(void);
@@ -51,21 +54,14 @@ void timer_config(void);
 void gpio_config(void)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
-    /* rcu_periph_clock_enable(RCU_GPIOB); */
     rcu_periph_clock_enable(RCU_GPIOC);
     rcu_periph_clock_enable(RCU_AF);
 
-    /*configure PA0(TIMER1 CH0) as alternate function
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_0);*/
-    
     /*configure PA0(TIMER1 CH3) as alternate function */
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_3);
 
     /*configure PA6(TIMER2 CH0) as alternate function*/
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_6);
-
-    /*configure PA8(TIMER0 CH0) as alternate function
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8);*/
 
     /* Red LED */
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
@@ -87,12 +83,6 @@ void timer_config(void)
        - The TIMER1 update event is used as trigger output.
 
        2/TIMER2 is slave for TIMER1, 
-       - PWM mode is used.
-       - The ITR1(TIMER1) is used as input trigger.
-       - external clock mode is used, the counter counts on the rising edges of
-         the selected trigger.
-
-       3/TIMER0 is slave for TIMER1, 
        - PWM mode is used.
        - The ITR1(TIMER1) is used as input trigger.
        - external clock mode is used, the counter counts on the rising edges of
@@ -176,52 +166,12 @@ void timer_config(void)
     /* TIMER2 update event is used as trigger output */
     timer_master_output_trigger_source_select(TIMER2, TIMER_TRI_OUT_SRC_UPDATE);
 
-#if 0
-    /* TIMER0  configuration */
-    timer_deinit(TIMER0);
-    /* initialize TIMER init parameter struct */
-    timer_struct_para_init(&timer_initpara);
-    timer_initpara.prescaler         = 0;
-    timer_initpara.alignedmode       = TIMER_COUNTER_EDGE;
-    timer_initpara.counterdirection  = TIMER_COUNTER_UP;
-    timer_initpara.period            = 1;
-    timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
-    timer_initpara.repetitioncounter = 0;
-    timer_init(TIMER0, &timer_initpara);
-
-    /* initialize TIMER channel output parameter struct */
-    timer_channel_output_struct_para_init(&timer_ocinitpara);
-    /* CH0 configuration in PWM0 mode */
-    timer_ocinitpara.outputstate  = TIMER_CCX_ENABLE;
-    timer_ocinitpara.outputnstate = TIMER_CCXN_DISABLE;
-    timer_ocinitpara.ocpolarity   = TIMER_OC_POLARITY_HIGH;
-    timer_ocinitpara.ocnpolarity  = TIMER_OCN_POLARITY_HIGH;
-    timer_ocinitpara.ocidlestate  = TIMER_OC_IDLE_STATE_LOW;
-    timer_ocinitpara.ocnidlestate = TIMER_OCN_IDLE_STATE_LOW;
-    timer_channel_output_config(TIMER0, TIMER_CH_0, &timer_ocinitpara);
-
-    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, 1);
-    timer_channel_output_mode_config(TIMER0, TIMER_CH_0, TIMER_OC_MODE_PWM0);
-    timer_channel_output_shadow_config(TIMER0, TIMER_CH_0, TIMER_OC_SHADOW_DISABLE);
-
-    /* auto-reload preload enable */
-    timer_auto_reload_shadow_enable(TIMER0);
-    /* TIMER0 output enable */
-    timer_primary_output_config(TIMER0, ENABLE);
-    /* slave mode selection: TIMER0 */
-    timer_slave_mode_select(TIMER0, TIMER_SLAVE_MODE_EXTERNAL0);
-    timer_input_trigger_source_select(TIMER0, TIMER_SMCFG_TRGSEL_ITI1);
-#endif
-
     timer_interrupt_enable(TIMER1, TIMER_INT_CH1);
     timer_interrupt_enable(TIMER2, TIMER_INT_CH0);
 
     /* TIMER counter enable */
     timer_enable(TIMER1);
     timer_enable(TIMER2);
-#if 0
-    timer_enable(TIMER0);
-#endif
 }
 
 /*!
@@ -232,6 +182,9 @@ void timer_config(void)
 */
 int main(void)
 {
+    /* Enable cycle counter via Machine Counter-Inhibit CSR (0x320) */
+    write_csr(0x320, 0);
+
     gpio_config();
 
     eclic_global_interrupt_enable();
@@ -246,10 +199,10 @@ int main(void)
     while (1);
 }
 
+volatile uint64_t mymcycle;
+
 void TIMER1_IRQHandler(void)
 {
-    // static uint32_t counter;
-
     if (SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH1))
     {
         /* clear channel 0 interrupt bit */
@@ -257,33 +210,17 @@ void TIMER1_IRQHandler(void)
 
         LEDR_TOG;
 
-#if 0
-        if (counter % 10 == 0)
-        {
-            LEDB_TOG;
-        }
-        counter += 1;
-#endif
+        mymcycle = get_cycle_value();
     }
 }
 
 void TIMER2_IRQHandler(void)
 {
-    // static uint32_t counter;
-
     if (SET == timer_interrupt_flag_get(TIMER2, TIMER_INT_CH0))
     {
         /* clear channel 0 interrupt bit */
         timer_interrupt_flag_clear(TIMER2, TIMER_INT_CH0);
 
         LEDG_TOG;
-
-#if 0
-        if (counter % 10 == 0)
-        {
-            LEDB_TOG;
-        }
-        counter += 1;
-#endif
     }
 }
