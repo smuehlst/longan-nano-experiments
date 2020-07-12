@@ -58,6 +58,12 @@ void gpio_config(void)
 
     /* Red LED */
     gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
+
+    /* Blue LED */
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_2);
+
+    /* PA4 with 1/10 s delay */
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_4);
 }
 
 /**
@@ -72,7 +78,7 @@ void timer_config(void)
     TIMER1 Configuration: 
     TIMER1CLK = SystemCoreClock/5400 = 20KHz.
     TIMER1 configuration is timing mode, and the timing is 0.2s(4000/20000 = 0.2s).
-    CH0 update rate = TIMER1 counter clock/CH0CV = 20000/4000 = 5Hz.
+    CH3update rate = TIMER1 counter clock/CH0CV = 20000/4000 = 5Hz.
     ---------------------------------------------------------------------------- */
     timer_oc_parameter_struct timer_ocinitpara;
     timer_parameter_struct timer_initpara;
@@ -86,7 +92,7 @@ void timer_config(void)
     timer_initpara.prescaler         = 5399;
     timer_initpara.alignedmode       = TIMER_COUNTER_EDGE;
     timer_initpara.counterdirection  = TIMER_COUNTER_UP;
-    timer_initpara.period            = 4000;
+    timer_initpara.period            = 20000;
     timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
     timer_init(TIMER1, &timer_initpara);
 
@@ -99,7 +105,7 @@ void timer_config(void)
     timer_channel_output_config(TIMER1, TIMER_CH_3, &timer_ocinitpara);
 
     /* CH3 configuration in OC timing mode */
-    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_3, 2000);
+    timer_channel_output_pulse_value_config(TIMER1, TIMER_CH_3, 10000);
     timer_channel_output_mode_config(TIMER1, TIMER_CH_3, TIMER_OC_MODE_PWM0);
     timer_channel_output_shadow_config(TIMER1, TIMER_CH_3, TIMER_OC_SHADOW_DISABLE);
 
@@ -125,10 +131,24 @@ int main(void)
 
     timer_config();
 
+    /* LEDs off */
+    LEDR(1);
+    LEDB(1);
+
     while (1);
 }
 
-static volatile uint64_t mymcycle;
+static uint64_t const one_s_count = 108000000;
+static uint64_t const one_tenth_s_count = one_s_count / 10;
+
+static
+inline
+void
+gpio_bit_toggle(uint32_t gpio_periph, uint32_t pin)
+{
+    gpio_bit_write(gpio_periph, pin,
+            (bit_status) (1 - gpio_input_bit_get(gpio_periph, pin)));
+}
 
 void TIMER1_IRQHandler(void)
 {
@@ -139,6 +159,22 @@ void TIMER1_IRQHandler(void)
 
         LEDR_TOG;
 
-        mymcycle = get_cycle_value();
+        LEDB(0);
+        
+        uint64_t volatile start = get_cycle_value();
+        while (1)
+        {
+            /* delay loop */
+            uint64_t volatile now = get_cycle_value();
+            if (now - start > one_tenth_s_count)
+            {
+                break;
+            }
+        }
+
+        LEDB(1);
+
+        gpio_bit_write(GPIOA, GPIO_PIN_4,
+            (bit_status) (1 - gpio_input_bit_get(GPIOA, GPIO_PIN_4)));
     }
 }
