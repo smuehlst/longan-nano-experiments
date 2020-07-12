@@ -57,10 +57,10 @@ void gpio_config(void)
     rcu_periph_clock_enable(RCU_GPIOC);
     rcu_periph_clock_enable(RCU_AF);
 
-    /*configure PA3(TIMER1 CH3) as alternate function */
+    /* configure PA3(TIMER1 CH3) as alternate function */
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_3);
 
-    /*configure PA6(TIMER2 CH0) as alternate function*/
+    /* configure PA6(TIMER2 CH0) as alternate function */
     gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_6);
 
     /* Red LED */
@@ -71,7 +71,7 @@ void gpio_config(void)
     /* PA4 with 1/10 s delay */
     gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_4);
 
-    /*configure PB8(TIMER3 CH0) as alternate function*/
+    /* configure PB6(TIMER3 CH0) as alternate function  */
     gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_6);
 }
 
