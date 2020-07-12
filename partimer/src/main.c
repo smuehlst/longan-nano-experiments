@@ -54,6 +54,7 @@ void timer_config(void);
 void gpio_config(void)
 {
     rcu_periph_clock_enable(RCU_GPIOA);
+    rcu_periph_clock_enable(RCU_GPIOB);
     rcu_periph_clock_enable(RCU_GPIOC);
     rcu_periph_clock_enable(RCU_AF);
 
@@ -71,8 +72,8 @@ void gpio_config(void)
     /* PA4 with 1/10 s delay */
     gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_4);
 
-    /*configure PA8(TIMER0 CH0) as alternate function*/
-    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_8);
+    /*configure PB8(TIMER3 CH0) as alternate function*/
+    gpio_init(GPIOB, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_6);
 }
 
 /**
@@ -109,7 +110,7 @@ void timer_config(void)
     timer_parameter_struct timer_initpara;
 
     /* rcu_periph_clock_enable(RCU_TIMER0); */
-    rcu_periph_clock_enable(RCU_TIMER0);
+    rcu_periph_clock_enable(RCU_TIMER3);
     rcu_periph_clock_enable(RCU_TIMER1);
     rcu_periph_clock_enable(RCU_TIMER2);
 
@@ -185,17 +186,17 @@ void timer_config(void)
     /* TIMER2 update event is used as trigger output */
     timer_master_output_trigger_source_select(TIMER2, TIMER_TRI_OUT_SRC_UPDATE);
 
-    /* TIMER0  configuration */
-    timer_deinit(TIMER0);
+    /* TIMER3  configuration */
+    timer_deinit(TIMER3);
     /* initialize TIMER init parameter struct */
     timer_struct_para_init(&timer_initpara);
-    timer_initpara.prescaler         = 0;
+    timer_initpara.prescaler         = 539;
     timer_initpara.alignedmode       = TIMER_COUNTER_EDGE;
     timer_initpara.counterdirection  = TIMER_COUNTER_UP;
-    timer_initpara.period            = 1;
+    timer_initpara.period            = 399;
     timer_initpara.clockdivision     = TIMER_CKDIV_DIV1;
     timer_initpara.repetitioncounter = 0;
-    timer_init(TIMER0, &timer_initpara);
+    timer_init(TIMER3, &timer_initpara);
 
     /* initialize TIMER channel output parameter struct */
     timer_channel_output_struct_para_init(&timer_ocinitpara);
@@ -206,27 +207,26 @@ void timer_config(void)
     timer_ocinitpara.ocnpolarity  = TIMER_OCN_POLARITY_HIGH;
     timer_ocinitpara.ocidlestate  = TIMER_OC_IDLE_STATE_LOW;
     timer_ocinitpara.ocnidlestate = TIMER_OCN_IDLE_STATE_LOW;
-    timer_channel_output_config(TIMER0, TIMER_CH_0, &timer_ocinitpara);
+    timer_channel_output_config(TIMER3, TIMER_CH_0, &timer_ocinitpara);
 
-    timer_channel_output_pulse_value_config(TIMER0, TIMER_CH_0, 1);
-    timer_channel_output_mode_config(TIMER0, TIMER_CH_0, TIMER_OC_MODE_PWM0);
-    timer_channel_output_shadow_config(TIMER0, TIMER_CH_0, TIMER_OC_SHADOW_DISABLE);
+    timer_channel_output_pulse_value_config(TIMER3, TIMER_CH_0, 200);
+    timer_channel_output_mode_config(TIMER3, TIMER_CH_0, TIMER_OC_MODE_PWM0);
+    timer_channel_output_shadow_config(TIMER3, TIMER_CH_0, TIMER_OC_SHADOW_DISABLE);
 
     /* auto-reload preload enable */
-    timer_auto_reload_shadow_enable(TIMER0);
-    /* TIMER0 output enable */
-    timer_primary_output_config(TIMER0, ENABLE);
-    /* slave mode selection: TIMER0 */
-    timer_slave_mode_select(TIMER0, TIMER_SLAVE_MODE_EXTERNAL0);
-    timer_input_trigger_source_select(TIMER0, TIMER_SMCFG_TRGSEL_ITI1);
+    timer_auto_reload_shadow_enable(TIMER3);
+    /* TIMER3 output enable */
+    timer_primary_output_config(TIMER3, ENABLE);
 
     timer_interrupt_enable(TIMER1, TIMER_INT_CH3);
     timer_interrupt_enable(TIMER2, TIMER_INT_CH0);
+    timer_interrupt_enable(TIMER3, TIMER_INT_CH0);
 
     /* TIMER counter enable */
     timer_enable(TIMER1);
     timer_enable(TIMER2);
-    timer_enable(TIMER0);
+    timer_disable(TIMER3);
+    // timer_enable(TIMER3);
 }
 
 /*!
@@ -246,6 +246,7 @@ int main(void)
     eclic_set_nlbits(ECLIC_GROUP_LEVEL3_PRIO1);
     eclic_irq_enable(TIMER1_IRQn, 1, 0);
     eclic_irq_enable(TIMER2_IRQn, 1, 0);
+    eclic_irq_enable(TIMER3_IRQn, 1, 0);
     timer_config();
 
     LEDR(1);
@@ -263,6 +264,9 @@ void TIMER1_IRQHandler(void)
         /* clear channel 3 interrupt bit */
         timer_interrupt_flag_clear(TIMER1, TIMER_INT_CH3);
 
+        timer_counter_value_config(TIMER3, 0);
+        timer_enable(TIMER3);
+
         LEDR_TOG;
 
         mymcycle = get_cycle_value();
@@ -277,5 +281,27 @@ void TIMER2_IRQHandler(void)
         timer_interrupt_flag_clear(TIMER2, TIMER_INT_CH0);
 
         LEDG_TOG;
+    }
+}
+
+static
+inline
+void
+gpio_bit_toggle(uint32_t gpio_periph, uint32_t pin)
+{
+    gpio_bit_write(gpio_periph, pin,
+            (bit_status) (1 - gpio_input_bit_get(gpio_periph, pin)));
+}
+
+void TIMER3_IRQHandler(void)
+{
+    if (SET == timer_interrupt_flag_get(TIMER3, TIMER_INT_CH0))
+    {
+        /* clear channel 0 interrupt bit */
+        timer_interrupt_flag_clear(TIMER3, TIMER_INT_CH0);
+
+        timer_disable(TIMER3);
+
+        gpio_bit_toggle(GPIOA, GPIO_PIN_4);
     }
 }
