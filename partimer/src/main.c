@@ -38,7 +38,6 @@ OF SUCH DAMAGE.
 #include <stdio.h>
 #include "gd32v_pjt_include.h"
 #include "systick.h"
-#include "riscv_encoding.h"
 
 /* configure the GPIO ports */
 void gpio_config(void);
@@ -237,9 +236,6 @@ void timer_config(void)
 */
 int main(void)
 {
-    /* Enable cycle counter via Machine Counter-Inhibit CSR (0x320) */
-    write_csr(0x320, 0);
-
     gpio_config();
 
     eclic_global_interrupt_enable();
@@ -255,8 +251,6 @@ int main(void)
     while (1);
 }
 
-volatile uint64_t mymcycle;
-
 void TIMER1_IRQHandler(void)
 {
     if (SET == timer_interrupt_flag_get(TIMER1, TIMER_INT_CH3))
@@ -268,8 +262,6 @@ void TIMER1_IRQHandler(void)
         timer_enable(TIMER3);
 
         LEDR_TOG;
-
-        mymcycle = get_cycle_value();
     }
 }
 
