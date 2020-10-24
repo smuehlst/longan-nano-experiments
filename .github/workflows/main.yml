@@ -1,8 +1,6 @@
 name: CI
 
-on:
-  workflow_dispatch:
-  push:
+on: [ workflow_dispatch, push ]
 
 jobs:
   build:
@@ -31,14 +29,15 @@ jobs:
       if: steps.platformio-cache-pip-id.outputs.cache-hit != 'true' ||
         steps.platformio-cache-id.outputs.cache-hit != 'true'
       run: |
-        pip install -r requirements.txt
+        wget https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -O get-platformio.py
+        python3 get-platformio.py
         $HOME/.platformio/penv/bin/platformio --version
         
     # Workaround because PlatformIO fails to install the necessary dfu-util package
     # See https://community.platformio.org/t/dfu-suffix-not-found-for-longan-nano-build/16710/4?u=smuehlst
     - name: Install dfu-util
       run: |
-        wget -o dfu-util.tgz https://bintray.com/platformio/tool-packages/download_file?file_path=2e415f3-tool-dfuutil-linux_x86_64-1.9.200310.tar.gz
+        wget -O dfu-util.tgz https://bintray.com/platformio/tool-packages/download_file?file_path=2e415f3-tool-dfuutil-linux_x86_64-1.9.200310.tar.gz
         mkdir -p $HOME/.platformio/packages/tool-dfuutil
         tar -C $HOME/.platformio/packages/tool-dfuutil -x -f dfu-util.tgz
 
