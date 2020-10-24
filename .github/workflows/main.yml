@@ -48,7 +48,7 @@ jobs:
         dfu-util --version
         type dfu-suffix
         mkdir bin
-        ln -s bin/dfu-suffix /usr/bin/dfu-suffix
+        ln -s /usr/bin/dfu-suffix bin/dfu-suffix
 
     - name: Build Stepper
       run: |
