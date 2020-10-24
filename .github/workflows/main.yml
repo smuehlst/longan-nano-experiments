@@ -20,15 +20,8 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Cache PlatformIO Binary
-      id: platformio-bin-cache-id
-      uses: actions/cache@v1
-      with:
-        path: ~/.local
-        key: ${{ runner.os }}-platformio-bin
-
     - name: Cache PlatformIO Packages
-      id: platformio-packages-cache-id
+      id: platformio-cache-id
       uses: actions/cache@v1
       with:
         path: ~/.platformio
@@ -36,26 +29,23 @@ jobs:
 
     - name: Install PlatformIO
       if: steps.platformio-cache-pip-id.outputs.cache-hit != 'true' ||
-        steps.platformio-bin-cache-id.outputs.cache-hit != 'true' ||
-        steps.platformio-packages-cache-id.outputs.cache-hit != 'true'
+        steps.platformio-cache-id.outputs.cache-hit != 'true'
       run: |
         pip install -r requirements.txt
-        $HOME/.local/bin/platformio --version
+        $HOME/.platformio/penv/bin/platformio --version
         
+    # Workaround because PlatformIO fails to install the necessary dfu-util package
+    # See https://community.platformio.org/t/dfu-suffix-not-found-for-longan-nano-build/16710/4?u=smuehlst
     - name: Install dfu-util
       run: |
-        sudo apt-get --assume-yes install dfu-util
-        dfu-util --version
-        type dfu-suffix
-        mkdir bin
-        ln -s /usr/bin/dfu-suffix bin/dfu-suffix
+        wget -o dfu-util.tgz https://bintray.com/platformio/tool-packages/download_file?file_path=2e415f3-tool-dfuutil-linux_x86_64-1.9.200310.tar.gz
+        mkdir -p $HOME/.platformio/packages/tool-dfuutil
+        tar -C $HOME/.platformio/packages/tool-dfuutil -x -f dfu-util.tgz
 
     - name: Build Stepper
       run: |
-        type dfu-suffix
-        $HOME/.local/bin/platformio run -d stepper -v
-        pwd
+        $HOME/.platformio/penv/bin/platformio run -d stepper -v
         
     - name: Build MAX6675
       run: |
-        $HOME/.local/bin/platformio run -d max6675 -v
+        $HOME/.platformio/penv/bin/platformio run -d max6675 -v
