@@ -46,9 +46,11 @@ jobs:
       run: |
         sudo apt-get --assume-yes install dfu-util
         dfu-util --version
+        type dfu-suffix
 
     - name: Build Stepper
       run: |
+        type dfu-suffix
         $HOME/.local/bin/platformio run -d stepper -v
         
     - name: Build MAX6675
